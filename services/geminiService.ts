@@ -1,7 +1,13 @@
+
 import { GoogleGenAI } from "@google/genai";
 import type { GenerationParams, Presentation, Slide } from '../types';
 
 export async function generatePresentation(params: GenerationParams): Promise<Presentation> {
+  // 1. Validate API Key
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY is missing. Please check your environment variables.");
+  }
+
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   const { topic, style, fileContext, slideCount } = params;
 
@@ -11,7 +17,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
     Style: ${style}.
     Target Slide Count: ${slideCount}.
     
-    ${fileContext ? `Context from uploaded file: ${fileContext.slice(0, 2000)}...` : ''}
+    ${fileContext ? `Context from uploaded file: ${fileContext.slice(0, 3000)}...` : ''}
 
     Generate a valid JSON object representing the presentation. 
     The slides should vary in type to be engaging:
@@ -24,25 +30,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
     For 'chart' slides, provide numerical data and labels.
     For 'process' slides, provide 3-5 steps.
     
-    Return ONLY the JSON object with this structure:
-    {
-      "title": "Main Presentation Title",
-      "author": "Lumina AI",
-      "slides": [
-        {
-          "id": "unique_id",
-          "type": "title|content|chart|table|process",
-          "title": "Slide Title",
-          "subtitle": "Optional subtitle",
-          "bulletPoints": ["Point 1", "Point 2"],
-          "layout": "left|right|center",
-          "backgroundImageKeyword": "A single keyword for finding a background image (e.g., 'technology', 'sky', 'office')",
-          "chartData": { "type": "bar|line|pie", "labels": ["A", "B"], "datasets": [{ "label": "Data", "data": [10, 20] }] }, // Only if type is chart
-          "tableData": { "headers": ["Col1", "Col2"], "rows": [["Val1", "Val2"]] }, // Only if type is table
-          "processSteps": [{ "title": "Step 1", "description": "Desc" }] // Only if type is process
-        }
-      ]
-    }
+    Return ONLY the JSON object with this structure. DO NOT wrap in markdown code blocks.
   `;
 
   try {
@@ -113,7 +101,15 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
       }
     });
 
-    const jsonString = response.text;
+    let jsonString = response.text;
+    
+    if (!jsonString) {
+       throw new Error("AI returned empty response.");
+    }
+
+    // Clean Markdown Code Blocks (common cause of JSON.parse errors)
+    jsonString = jsonString.replace(/^```json\s*/, "").replace(/```\s*$/, "");
+
     const parsed = JSON.parse(jsonString);
     
     // Enhance with original params
@@ -122,8 +118,9 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
       topic,
       style
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error calling Gemini API:", error);
-    throw new Error("Failed to engineer the presentation structure.");
+    // Pass specific error message if available
+    throw new Error(error.message || "Failed to engineer the presentation structure.");
   }
 }

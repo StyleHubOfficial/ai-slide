@@ -18,7 +18,8 @@ function App() {
       setView('PRESENT');
     } catch (error) {
       console.error("Creation failed:", error);
-      alert("Failed to create presentation. Please try again.");
+      const msg = error instanceof Error ? error.message : "Unknown error occurred";
+      alert(`Failed to create presentation: ${msg}`);
     } finally {
       setIsLoading(false);
     }

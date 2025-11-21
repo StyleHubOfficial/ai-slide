@@ -28,7 +28,8 @@
         to { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in-up {
-        animation: fade-in-up 0.6s ease-out forwards;
+        animation: fade-in-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+        opacity: 0; /* Ensure hidden initially */
       }
       
       @keyframes glow {
@@ -44,6 +45,89 @@
         backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
+
+      /* Cinematic Slide Transitions */
+      @keyframes slide-enter-fade {
+        0% { opacity: 0; filter: blur(10px); }
+        100% { opacity: 1; filter: blur(0); }
+      }
+      .slide-enter-fade {
+        animation: slide-enter-fade 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
+      }
+
+      @keyframes slide-enter-zoom {
+        0% { opacity: 0; transform: scale(1.1) translateY(20px); filter: blur(4px); }
+        100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+      }
+      .slide-enter-zoom {
+        animation: slide-enter-zoom 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      @keyframes slide-enter-hologram {
+        0% { opacity: 0; transform: scaleY(0.1) scaleX(1.2); filter: hue-rotate(90deg) brightness(2); }
+        30% { opacity: 0.5; transform: scaleY(1.1) scaleX(0.9); }
+        60% { opacity: 0.8; transform: scaleY(0.95); filter: hue-rotate(0deg); }
+        100% { opacity: 1; transform: scale(1); filter: none; }
+      }
+      .slide-enter-hologram {
+        animation: slide-enter-hologram 0.6s ease-out both;
+      }
+
+      @keyframes slide-enter-shutter {
+        0% { clip-path: inset(0 100% 0 0); transform: translateX(50px); }
+        100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+      }
+      .slide-enter-shutter {
+        animation: slide-enter-shutter 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+
+      /* Stagger Utility for children */
+      .stagger-1 { animation-delay: 100ms; }
+      .stagger-2 { animation-delay: 200ms; }
+      .stagger-3 { animation-delay: 300ms; }
+      .stagger-4 { animation-delay: 400ms; }
+      .stagger-5 { animation-delay: 500ms; }
+
+      /* Print Styles */
+      @page {
+        size: landscape;
+        margin: 0;
+      }
+      @media print {
+        body {
+          background: white !important;
+          color: black !important;
+          overflow: visible !important;
+        }
+        #root {
+          height: auto !important;
+          width: 100% !important;
+          overflow: visible !important;
+        }
+        .no-print {
+          display: none !important;
+        }
+        .print-only {
+          display: block !important;
+        }
+        /* Ensure graphics print */
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        /* Break pages */
+        .slide-print-wrapper {
+          break-after: page;
+          page-break-after: always;
+          height: 100vh;
+          width: 100vw;
+          overflow: hidden;
+        }
+      }
+      
+      .print-only {
+        display: none;
+      }
     </style>
   <script type="importmap">
 {
@@ -52,12 +136,13 @@
     "react": "https://aistudiocdn.com/react@^18.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^18.2.0/",
     "react-dom": "https://aistudiocdn.com/react-dom@^18.2.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0"
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "pptxgenjs": "https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/+esm"
   }
 }
 </script>
 </head>
-  <body class="bg-slate-950 text-slate-200 antialiased overflow-hidden">
+  <body class="bg-slate-950 text-slate-200 antialiased overflow-hidden selection:bg-sky-500/30">
     <div id="root" class="h-screen w-screen"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
