@@ -6,6 +6,7 @@ import Button from './ui/Button';
 import Select from './ui/Select';
 import XIcon from './icons/XIcon';
 import PptxGenJS from 'pptxgenjs';
+import Spinner from './ui/Spinner';
 
 interface PresentationViewProps {
   presentation: Presentation;
@@ -20,6 +21,7 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
   const [activeStyle, setActiveStyle] = useState<PresentationStyle>(presentation.style);
   const [transition, setTransition] = useState<TransitionStyle>('zoom');
   const [showControls, setShowControls] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   const nextSlide = () => {
     if (currentSlideIndex < presentation.slides.length - 1) {
@@ -39,6 +41,8 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
   };
 
   const handleExportPPT = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
     try {
       const pptx = new PptxGenJS();
       
@@ -185,6 +189,8 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
     } catch (e) {
       console.error("PPT Generation Error", e);
       alert("Failed to generate PowerPoint file. Please try again.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -275,9 +281,11 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
              </Button>
              <Button 
                 onClick={handleExportPPT}
-                className="py-1.5 px-3 text-[10px] md:text-xs bg-sky-600 hover:bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.4)] whitespace-nowrap"
+                disabled={isExporting}
+                className="py-1.5 px-3 text-[10px] md:text-xs bg-sky-600 hover:bg-sky-500 shadow-[0_0_15px_rgba(14,165,233,0.4)] whitespace-nowrap flex items-center gap-2"
              >
-               Export .PPTX
+               {isExporting && <Spinner className="w-3 h-3" />}
+               {isExporting ? 'Generating...' : 'Export .PPTX'}
              </Button>
           </div>
         </div>
