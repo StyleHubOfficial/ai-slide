@@ -3,12 +3,16 @@ import { GoogleGenAI } from "@google/genai";
 import type { GenerationParams, Presentation, Slide } from '../types';
 
 export async function generatePresentation(params: GenerationParams): Promise<Presentation> {
-  // 1. Validate API Key
-  if (!process.env.API_KEY) {
+  // 1. Validate API Key Safe Check
+  // We check if process is defined to avoid ReferenceErrors in some browser runtimes, 
+  // and then check for the key.
+  const apiKey = typeof process !== 'undefined' && process.env ? process.env.API_KEY : undefined;
+
+  if (!apiKey) {
     throw new Error("API_KEY is missing. Please check your environment variables.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey: apiKey });
   const { topic, style, fileContext, slideCount } = params;
 
   const prompt = `
