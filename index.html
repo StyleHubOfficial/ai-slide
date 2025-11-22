@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Lumina - AI Presentation Architect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -150,6 +150,44 @@
       }
       .slide-enter-cube {
         animation: slide-enter-cube 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+      }
+      
+      /* --- LOADING ANIMATIONS --- */
+      
+      @keyframes spin-slow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      .animate-spin-slow {
+         animation: spin-slow 8s linear infinite;
+      }
+      
+      @keyframes ping-slow {
+        0% { transform: scale(1); opacity: 0.4; }
+        50% { transform: scale(1.2); opacity: 0.1; }
+        100% { transform: scale(1); opacity: 0.4; }
+      }
+      .animate-ping-slow {
+        animation: ping-slow 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+      }
+      
+      @keyframes scan-vertical {
+        0% { top: 0; opacity: 0; }
+        20% { opacity: 1; }
+        80% { opacity: 1; }
+        100% { top: 100%; opacity: 0; }
+      }
+      .animate-scan-vertical {
+        animation: scan-vertical 2s linear infinite;
+      }
+      
+      @keyframes data-flow {
+         0% { transform: translateY(0); opacity: 0; }
+         50% { opacity: 1; }
+         100% { transform: translateY(20px); opacity: 0; }
+      }
+      .animate-data-flow {
+         animation: data-flow 1.5s linear infinite;
       }
 
 

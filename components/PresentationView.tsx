@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Presentation, PresentationStyle, TransitionStyle } from '../types';
 import { SlideRenderer } from './SlideRenderers';
@@ -142,7 +141,7 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
   const nextSlideObj = presentation.slides[currentSlideIndex + 1];
 
   return (
-    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col h-screen w-screen overflow-hidden select-none">
+    <div className="fixed inset-0 z-50 bg-black text-white flex flex-col h-full w-full overflow-hidden select-none">
       
       {/* Hidden Print Container */}
       <div className="print-only">
@@ -210,6 +209,13 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       {/* --- MAIN VIEWPORT --- */}
       <div className="no-print flex-1 relative bg-black overflow-hidden flex flex-col" ref={containerRef} onMouseMove={handleMouseMove}>
         
+        {/* Mobile Top Bar (Close Button) */}
+        <div className="md:hidden absolute top-4 left-4 z-[60]">
+           <button onClick={onClose} className="p-2 rounded-full bg-black/50 border border-white/20 text-white/80 backdrop-blur">
+               <XIcon className="w-5 h-5" />
+           </button>
+        </div>
+
         {/* Laser Pointer Dot */}
         {isLaserMode && (
            <div className="fixed w-4 h-4 bg-red-500 rounded-full blur-[2px] pointer-events-none z-[100] shadow-[0_0_15px_rgba(239,68,68,0.8)] mix-blend-screen transition-transform duration-75" style={{ left: laserPos.x, top: laserPos.y, transform: 'translate(-50%, -50%)' }}></div>
@@ -217,7 +223,7 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
 
         {/* VIEW: GRID */}
         {viewMode === 'GRID' && (
-           <div className="w-full h-full overflow-y-auto grid grid-cols-2 md:grid-cols-4 gap-6 p-6 animate-fade-in-up content-start">
+           <div className="w-full h-full overflow-y-auto grid grid-cols-2 md:grid-cols-4 gap-6 p-6 animate-fade-in-up content-start pb-24">
               {presentation.slides.map((slide, idx) => (
                  <div key={slide.id} onClick={() => { setCurrentSlideIndex(idx); setViewMode('SLIDE'); }} className={`aspect-video bg-slate-900 rounded-lg border cursor-pointer relative overflow-hidden group hover:scale-105 transition-all duration-200 ${idx === currentSlideIndex ? 'border-sky-500 ring-2 ring-sky-500/50' : 'border-white/10 hover:border-white/30'}`}>
                     <div className="absolute inset-0 pointer-events-none origin-top-left transform scale-[0.25] w-[400%] h-[400%]">
@@ -296,29 +302,34 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       </div>
 
       {/* --- BOTTOM NAVIGATION (MOBILE APP INTERFACE) --- */}
-      <div className="md:hidden h-16 bg-slate-900 border-t border-white/10 flex items-center justify-between px-6 shrink-0 z-50 pb-safe">
-          <button onClick={prevSlide} disabled={currentSlideIndex === 0} className="flex flex-col items-center gap-1 text-slate-400 disabled:opacity-30 active:text-white">
-             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-             <span className="text-[10px]">Prev</span>
+      <div className="md:hidden h-20 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-between px-8 shrink-0 z-50 pb-safe">
+          <button onClick={prevSlide} disabled={currentSlideIndex === 0} className="flex flex-col items-center gap-1.5 text-slate-400 disabled:opacity-30 active:text-white active:scale-95 transition-transform">
+             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" /></svg>
+             </div>
           </button>
 
-          <button onClick={() => setIsDrawMode(!isDrawMode)} className={`flex flex-col items-center gap-1 ${isDrawMode ? 'text-sky-400' : 'text-slate-400'} active:text-white`}>
-             <PenIcon className="w-6 h-6" />
-             <span className="text-[10px]">Draw</span>
+          <button onClick={() => setIsDrawMode(!isDrawMode)} className={`flex flex-col items-center gap-1.5 ${isDrawMode ? 'text-sky-400' : 'text-slate-400'} active:text-white active:scale-95 transition-transform`}>
+             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${isDrawMode ? 'bg-sky-500/20' : 'bg-white/5'}`}>
+                <PenIcon className="w-5 h-5" />
+             </div>
           </button>
-
-          <div className="text-xs font-bold text-slate-500 font-mono">
-             {currentSlideIndex + 1}/{presentation.slides.length}
+          
+          <div className="flex flex-col items-center gap-1">
+              <span className="text-[10px] font-bold tracking-wider text-slate-500 uppercase">Slide</span>
+              <span className="text-lg font-black text-white font-mono">{currentSlideIndex + 1}<span className="text-slate-600">/</span>{presentation.slides.length}</span>
           </div>
 
-          <button onClick={() => setViewMode(viewMode === 'GRID' ? 'SLIDE' : 'GRID')} className={`flex flex-col items-center gap-1 ${viewMode === 'GRID' ? 'text-sky-400' : 'text-slate-400'} active:text-white`}>
-             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-             <span className="text-[10px]">Grid</span>
+          <button onClick={() => setViewMode(viewMode === 'GRID' ? 'SLIDE' : 'GRID')} className={`flex flex-col items-center gap-1.5 ${viewMode === 'GRID' ? 'text-sky-400' : 'text-slate-400'} active:text-white active:scale-95 transition-transform`}>
+             <div className={`w-10 h-10 rounded-full flex items-center justify-center ${viewMode === 'GRID' ? 'bg-sky-500/20' : 'bg-white/5'}`}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+             </div>
           </button>
 
-          <button onClick={nextSlide} disabled={currentSlideIndex === presentation.slides.length - 1} className="flex flex-col items-center gap-1 text-slate-400 disabled:opacity-30 active:text-white">
-             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-             <span className="text-[10px]">Next</span>
+          <button onClick={nextSlide} disabled={currentSlideIndex === presentation.slides.length - 1} className="flex flex-col items-center gap-1.5 text-slate-400 disabled:opacity-30 active:text-white active:scale-95 transition-transform">
+             <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" /></svg>
+             </div>
           </button>
       </div>
 

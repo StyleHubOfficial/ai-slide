@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { PresentationStyle, SharedPresentation } from '../types';
 import GlassCard from './ui/GlassCard';
@@ -6,8 +5,8 @@ import Button from './ui/Button';
 import Label from './ui/Label';
 import Select from './ui/Select';
 import Textarea from './ui/Textarea';
-import Spinner from './ui/Spinner';
 import ImageIcon from './icons/ImageIcon';
+import LoadingOverlay from './ui/LoadingOverlay';
 
 interface CreationStudioProps {
   onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => void;
@@ -58,6 +57,7 @@ const MOCK_COMMUNITY_DECKS: SharedPresentation[] = [
 
 const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) => {
   const [activeTab, setActiveTab] = useState<Tab>('HOME'); // Default to HOME (Converter on mobile)
+  const [loadingType, setLoadingType] = useState<'architect' | 'convert'>('architect');
   
   // Generator State
   const [topic, setTopic] = useState('');
@@ -79,6 +79,15 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
       const text = await file.text();
       setFileContext(text.slice(0, 8000));
     }
+  };
+
+  const handleCreateAction = (type: 'architect' | 'convert') => {
+     setLoadingType(type);
+     if (type === 'convert') {
+        onCreate(fileName ? `Presentation about ${fileName}` : topic, style, fileContext, slideCount);
+     } else {
+        onCreate(topic, style, '', slideCount);
+     }
   };
 
   const handleSimulatedUpload = () => {
@@ -106,7 +115,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
     switch (activeTab) {
         case 'HOME': // FILE CONVERTER (Default on Mobile)
             return (
-                <div className="w-full max-w-4xl animate-fade-in-up pb-24 lg:pb-0">
+                <div className="w-full max-w-4xl animate-fade-in-up">
                     <header className="mb-8 lg:mb-12 text-center lg:text-left">
                         <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">
                            Transform Documents
@@ -119,14 +128,14 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                     <GlassCard className="p-6 md:p-12 border-slate-700/50 bg-slate-900/40">
                          <div className="relative group mb-8">
                             <Label className="text-sky-400 mb-3">Upload Document</Label>
-                            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:bg-slate-800/30 hover:border-sky-500 transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(14,165,233,0.1)]">
-                               <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <ImageIcon className="w-16 h-16 text-slate-500 mb-4 group-hover:text-sky-400 transition-colors" />
+                            <label className="flex flex-col items-center justify-center w-full h-40 md:h-48 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:bg-slate-800/30 hover:border-sky-500 transition-all duration-300 group-hover:shadow-[0_0_30px_rgba(14,165,233,0.1)]">
+                               <div className="flex flex-col items-center justify-center pt-5 pb-6 text-center px-4">
+                                  <ImageIcon className="w-12 h-12 md:w-16 md:h-16 text-slate-500 mb-4 group-hover:text-sky-400 transition-colors" />
                                   {fileName ? (
-                                     <p className="text-lg text-sky-400 font-semibold">{fileName}</p>
+                                     <p className="text-lg text-sky-400 font-semibold break-all">{fileName}</p>
                                   ) : (
                                      <>
-                                        <p className="text-base text-slate-400 font-medium">Click to Upload PDF or PPT</p>
+                                        <p className="text-sm md:text-base text-slate-400 font-medium">Click to Upload PDF or PPT</p>
                                         <p className="text-xs text-slate-600 mt-2">AI extracts key insights automatically</p>
                                      </>
                                   )}
@@ -135,7 +144,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                             </label>
                          </div>
                          
-                         <div className="grid grid-cols-2 gap-4 mb-8">
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                              <div>
                                 <Label>Visual Style</Label>
                                 <Select value={style} onChange={(e) => setStyle(e.target.value as PresentationStyle)}>
@@ -151,11 +160,11 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                          </div>
 
                          <Button 
-                            onClick={() => onCreate(fileName ? `Presentation about ${fileName}` : topic, style, fileContext, slideCount)}
+                            onClick={() => handleCreateAction('convert')}
                             disabled={isLoading || !fileName}
-                            className="w-full h-14 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg"
+                            className="w-full h-12 md:h-14 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg"
                          >
-                            {isLoading ? <span className="flex items-center gap-2"><Spinner className="w-5 h-5"/> Processing File...</span> : 'Convert to Presentation'}
+                            Convert to Presentation
                          </Button>
                     </GlassCard>
                 </div>
@@ -163,7 +172,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
 
         case 'CREATE': // AI GENERATOR
             return (
-                <div className="w-full max-w-4xl animate-fade-in-up pb-24 lg:pb-0">
+                <div className="w-full max-w-4xl animate-fade-in-up">
                     <header className="mb-8 lg:mb-12 text-center lg:text-left">
                         <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">
                            Architect your Vision
@@ -180,7 +189,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                               value={topic}
                               onChange={(e) => setTopic(e.target.value)}
                               placeholder="e.g. A pitch deck for a new AI startup revolutionizing healthcare..."
-                              className="h-40 text-lg bg-black/20 border-white/10 focus:border-sky-500/50"
+                              className="h-32 md:h-40 text-base md:text-lg bg-black/20 border-white/10 focus:border-sky-500/50"
                             />
                          </div>
                          
@@ -198,25 +207,24 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                                </Select>
                             </div>
                             <div>
-                               <Label className="text-slate-400">Length</Label>
+                               <Label className="text-slate-400">Length: {slideCount} Slides</Label>
                                <input 
                                   type="range" 
                                   min="3" 
                                   max="15" 
                                   value={slideCount} 
                                   onChange={(e) => setSlideCount(parseInt(e.target.value))}
-                                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 mt-5"
+                                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 mt-4"
                                />
-                               <div className="text-right text-xs text-sky-400 mt-1">{slideCount} Slides</div>
                             </div>
                          </div>
 
                          <Button 
-                            onClick={() => onCreate(topic, style, '', slideCount)}
+                            onClick={() => handleCreateAction('architect')}
                             disabled={isLoading || !topic}
-                            className="w-full h-14 text-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-lg"
+                            className="w-full h-12 md:h-14 text-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-lg"
                          >
-                            {isLoading ? <span className="flex items-center gap-2"><Spinner className="w-5 h-5"/> Architecting...</span> : 'Generate Presentation'}
+                            Generate Presentation
                          </Button>
                     </GlassCard>
                 </div>
@@ -224,18 +232,18 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
 
         case 'COMMUNITY': // COMMUNITY HUB
             return (
-                <div className="w-full max-w-5xl animate-fade-in-up pb-24 lg:pb-0">
+                <div className="w-full max-w-5xl animate-fade-in-up">
                     <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-                        <div>
+                        <div className="text-center md:text-left">
                             <h1 className="text-3xl font-bold text-white tracking-tight">Community Hub</h1>
-                            <p className="text-slate-400">Explore, remix, and share decks from around the world.</p>
+                            <p className="text-slate-400 text-sm">Explore, remix, and share decks from around the world.</p>
                         </div>
                         <Button 
                             onClick={handleSimulatedUpload} 
                             disabled={uploading}
-                            className="bg-white/10 border border-white/20 hover:bg-white/20"
+                            className="bg-white/10 border border-white/20 hover:bg-white/20 text-sm px-4"
                         >
-                            {uploading ? <Spinner className="w-4 h-4"/> : 'Upload to Public'}
+                            {uploading ? 'Uploading...' : 'Upload to Public'}
                         </Button>
                     </div>
 
@@ -279,13 +287,16 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-200 flex flex-col lg:flex-row overflow-hidden font-sans selection:bg-sky-500/30">
       
+      {/* High-Tech Loading Overlay */}
+      {isLoading && <LoadingOverlay type={loadingType} />}
+
       {/* Background Ambience */}
       <div className="fixed inset-0 z-0 pointer-events-none">
          <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-900/20 blur-[120px]"></div>
          <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-sky-900/20 blur-[120px]"></div>
       </div>
 
-      {/* Desktop Sidebar (Hidden on Mobile) */}
+      {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-64 h-full border-r border-white/5 bg-slate-900/50 backdrop-blur-xl flex-col py-8 z-10 shrink-0">
          <div className="px-6 mb-12 flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
@@ -310,16 +321,15 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center">
+      <main className="flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-32 lg:pb-12">
          {/* Mobile Header */}
-         <div className="lg:hidden w-full flex items-center justify-between mb-6">
+         <div className="lg:hidden w-full flex items-center justify-between mb-6 pt-2">
             <div className="flex items-center gap-2">
                  <div className="w-8 h-8 rounded-md bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                  </div>
                  <span className="font-black text-lg text-white">Lumina</span>
             </div>
-            {/* Developer Credit Mobile */}
              <div className="text-right">
                <p className="text-[10px] uppercase text-slate-500 font-bold">Dev by</p>
                <p className="text-xs font-black animate-text-shimmer">Lakshya</p>
@@ -331,14 +341,14 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
       </main>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around z-50 pb-safe">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-slate-900/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around z-50 pb-safe px-4">
          <NavBtn icon="home" label="Home" active={activeTab === 'HOME'} onClick={() => setActiveTab('HOME')} />
          
-         {/* Center Create Button */}
-         <div className="relative -top-5">
+         {/* Floating Create Button */}
+         <div className="relative -top-6">
              <button 
                 onClick={() => setActiveTab('CREATE')}
-                className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg shadow-sky-500/40 transition-transform active:scale-95 ${activeTab === 'CREATE' ? 'bg-white text-sky-600' : 'bg-gradient-to-r from-sky-500 to-indigo-600 text-white'}`}
+                className={`w-16 h-16 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(14,165,233,0.4)] transition-transform active:scale-95 ${activeTab === 'CREATE' ? 'bg-white text-sky-600' : 'bg-gradient-to-br from-sky-500 to-indigo-600 text-white'}`}
              >
                 <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
              </button>
@@ -364,9 +374,9 @@ const SidebarBtn: React.FC<{label: string, icon: string, active: boolean, onClic
 );
 
 const NavBtn: React.FC<{label: string, icon: string, active: boolean, onClick: () => void}> = ({ label, icon, active, onClick }) => (
-    <button onClick={onClick} className={`flex flex-col items-center gap-1 w-16 ${active ? 'text-sky-400' : 'text-slate-500'}`}>
+    <button onClick={onClick} className={`flex flex-col items-center gap-1.5 w-20 ${active ? 'text-sky-400' : 'text-slate-500'}`}>
         {getIcon(icon)}
-        <span className="text-[10px] font-medium">{label}</span>
+        <span className="text-[11px] font-bold tracking-wide">{label}</span>
     </button>
 );
 
