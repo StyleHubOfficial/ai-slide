@@ -54,7 +54,7 @@ function App() {
                 <XIcon className="w-6 h-6" />
               </button>
             </div>
-            <p className="text-slate-300 mb-6 leading-relaxed">
+            <p className="text-slate-300 mb-6 leading-relaxed break-words text-sm">
               {error}
             </p>
             

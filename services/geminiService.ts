@@ -3,9 +3,23 @@ import { GoogleGenAI } from "@google/genai";
 import type { GenerationParams, Presentation, Slide } from '../types';
 
 export async function generatePresentation(params: GenerationParams): Promise<Presentation> {
-  // Securely use the environment variable.
-  // The user must set API_KEY in their environment (Vercel or .env).
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // enhanced-env-check
+  // On Vercel/Vite, variables often need the VITE_ prefix to be exposed to the browser.
+  // We check both standard process.env and import.meta.env (Vite standard) to be robust.
+  let apiKey = process.env.API_KEY;
+  
+  // Fallback for Vite environments if process.env isn't populated
+  if (!apiKey && typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    apiKey = (import.meta as any).env.VITE_API_KEY;
+  }
+
+  if (!apiKey) {
+    throw new Error(
+      "API Key is missing. If you are hosted on Vercel, please rename your environment variable to 'VITE_API_KEY' in the project settings and redeploy."
+    );
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
   
   const { topic, style, fileContext, slideCount } = params;
 
