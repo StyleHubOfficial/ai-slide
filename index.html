@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Lumina - AI Presentation Architect</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -61,6 +61,27 @@
       }
       .animate-scanline {
         animation: scanline 3s linear infinite;
+      }
+
+      /* 5. Developer Name Shimmer */
+      @keyframes text-shimmer {
+        0% { background-position: -200% center; }
+        100% { background-position: 200% center; }
+      }
+      .animate-text-shimmer {
+        background: linear-gradient(
+          to right,
+          #fff 20%,
+          #38bdf8 40%,
+          #818cf8 60%,
+          #fff 80%
+        );
+        background-size: 200% auto;
+        color: #000;
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: text-shimmer 3s linear infinite;
       }
 
       .glass-panel {
@@ -189,6 +210,10 @@
       
       .print-only {
         display: none;
+      }
+
+      .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
       }
     </style>
   <script type="importmap">

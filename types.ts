@@ -42,7 +42,7 @@ export interface Slide {
   processSteps?: ProcessStep[];
   backgroundImageKeyword?: string; 
   layout?: 'left' | 'right' | 'center' | 'split';
-  speakerNotes?: string; // New field for presenter mode
+  speakerNotes?: string; 
 }
 
 export interface Presentation {
@@ -53,9 +53,18 @@ export interface Presentation {
   slides: Slide[];
 }
 
+// Community Feature Types
+export interface SharedPresentation extends Presentation {
+  id: string;
+  likes: number;
+  downloads: number;
+  sharedBy: string;
+  dateShared: string;
+}
+
 export interface GenerationParams {
   topic: string;
   style: PresentationStyle;
-  fileContext?: string; // Content from uploaded file
+  fileContext?: string; 
   slideCount: number;
 }
