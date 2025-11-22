@@ -41,6 +41,7 @@ export interface Slide {
   tableData?: TableData;
   processSteps?: ProcessStep[];
   backgroundImageKeyword?: string; 
+  imagePrompt?: string; // AI Image Generation Prompt
   layout?: 'left' | 'right' | 'center' | 'split';
   speakerNotes?: string; 
 }

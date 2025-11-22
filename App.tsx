@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { generatePresentation } from './services/geminiService';
+import { communityService } from './services/communityService';
 import { Presentation, PresentationStyle } from './types';
 import CreationStudio from './components/CreationStudio';
 import PresentationView from './components/PresentationView';
@@ -17,24 +18,51 @@ function App() {
   const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => {
     setIsLoading(true);
     setError(null);
+    
+    // Timeout Promise to prevent infinite loading
+    const timeout = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Generation timed out. The server is busy or the request was too complex. Try fewer slides.")), 45000)
+    );
+
     try {
-      const data = await generatePresentation({ topic, style, fileContext, slideCount });
+      // Race between generation and timeout
+      const data = await Promise.race([
+        generatePresentation({ topic, style, fileContext, slideCount }),
+        timeout
+      ]) as Presentation;
+
+      // Auto-save to history
+      communityService.saveHistory(data);
+
       setPresentation(data);
       setView('PRESENT');
     } catch (err) {
       console.error("Creation failed:", err);
       const msg = err instanceof Error ? err.message : "Unknown error occurred";
-      setError(msg);
+      // Only set error if not cancelled
+      if (msg !== "Generation cancelled by user.") {
+          setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleOpenPresentation = (data: Presentation) => {
+     setPresentation(data);
+     setView('PRESENT');
+  };
+
   const handleClosePresentation = () => {
-    if (window.confirm("Are you sure you want to close? You will lose this deck.")) {
-      setView('CREATE');
-      setPresentation(null);
-    }
+    // Exit immediately without confirm dialog for better UX ("Cancel Button Working")
+    setView('CREATE');
+    setPresentation(null);
+  };
+  
+  const handleCancelLoading = () => {
+      setIsLoading(false);
+      // Force state reset by triggering error manually or just resetting
+      setError("Generation cancelled by user.");
   };
 
   return (
@@ -68,7 +96,12 @@ function App() {
       )}
 
       {view === 'CREATE' && (
-        <CreationStudio onCreate={handleCreate} isLoading={isLoading} />
+        <CreationStudio 
+            onCreate={handleCreate} 
+            isLoading={isLoading} 
+            onCancelLoading={handleCancelLoading}
+            onOpenHistory={handleOpenPresentation}
+        />
       )}
       {view === 'PRESENT' && presentation && (
         <PresentationView presentation={presentation} onClose={handleClosePresentation} />

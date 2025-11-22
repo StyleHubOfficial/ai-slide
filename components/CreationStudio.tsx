@@ -1,62 +1,29 @@
-import React, { useState } from 'react';
-import { PresentationStyle, SharedPresentation } from '../types';
+
+import React, { useState, useEffect } from 'react';
+import { PresentationStyle, SharedPresentation, Presentation } from '../types';
+import { communityService } from '../services/communityService';
 import GlassCard from './ui/GlassCard';
 import Button from './ui/Button';
 import Label from './ui/Label';
 import Select from './ui/Select';
 import Textarea from './ui/Textarea';
 import ImageIcon from './icons/ImageIcon';
+import UploadIcon from './icons/UploadIcon';
+import ShareIcon from './icons/ShareIcon';
+import XIcon from './icons/XIcon';
 import LoadingOverlay from './ui/LoadingOverlay';
 
 interface CreationStudioProps {
   onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => void;
+  onOpenHistory: (presentation: Presentation) => void;
+  onCancelLoading: () => void;
   isLoading: boolean;
 }
 
 type Tab = 'HOME' | 'CREATE' | 'COMMUNITY';
 
-// Mock Community Data
-const MOCK_COMMUNITY_DECKS: SharedPresentation[] = [
-  {
-    id: 'c1',
-    topic: 'Future of AI',
-    title: 'The Generative Age',
-    author: 'Sarah Connors',
-    style: PresentationStyle.Futuristic,
-    likes: 124,
-    downloads: 45,
-    sharedBy: 'SarahC',
-    dateShared: '2h ago',
-    slides: [] // Mock
-  },
-  {
-    id: 'c2',
-    topic: 'Sustainable Energy',
-    title: 'Green Tech Revolution',
-    author: 'EcoLabs',
-    style: PresentationStyle.Nature,
-    likes: 89,
-    downloads: 12,
-    sharedBy: 'GreenGuy',
-    dateShared: '5h ago',
-    slides: [] // Mock
-  },
-  {
-    id: 'c3',
-    topic: 'Q4 Strategy',
-    title: 'Q4 Marketing Blitz',
-    author: 'Corp Dynamics',
-    style: PresentationStyle.Corporate,
-    likes: 256,
-    downloads: 110,
-    sharedBy: 'BizMaster',
-    dateShared: '1d ago',
-    slides: [] // Mock
-  }
-];
-
-const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) => {
-  const [activeTab, setActiveTab] = useState<Tab>('HOME'); // Default to HOME (Converter on mobile)
+const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory, onCancelLoading, isLoading }) => {
+  const [activeTab, setActiveTab] = useState<Tab>('HOME'); 
   const [loadingType, setLoadingType] = useState<'architect' | 'convert'>('architect');
   
   // Generator State
@@ -69,8 +36,19 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
   const [fileName, setFileName] = useState('');
 
   // Community State
-  const [communityDecks, setCommunityDecks] = useState<SharedPresentation[]>(MOCK_COMMUNITY_DECKS);
+  const [communityDecks, setCommunityDecks] = useState<SharedPresentation[]>([]);
+  const [userHistory, setUserHistory] = useState<Presentation[]>([]);
   const [uploading, setUploading] = useState(false);
+
+  // Load data on mount
+  useEffect(() => {
+    refreshData();
+  }, []);
+
+  const refreshData = () => {
+    setCommunityDecks(communityService.getDecks());
+    setUserHistory(communityService.getHistory());
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,33 +68,82 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
      }
   };
 
-  const handleSimulatedUpload = () => {
+  // Upload JSON Deck from Device to Community
+  const handleUploadDeck = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     setUploading(true);
-    setTimeout(() => {
-        const newDeck: SharedPresentation = {
-            id: Math.random().toString(),
-            topic: fileName || topic || "Untitled Project",
-            title: fileName || topic || "Untitled Project",
-            author: "You",
-            style: style,
-            likes: 0,
-            downloads: 0,
-            sharedBy: "You",
-            dateShared: "Just now",
-            slides: []
-        };
-        setCommunityDecks([newDeck, ...communityDecks]);
+    try {
+        const text = await file.text();
+        const json: Presentation = JSON.parse(text);
+        
+        if (!json.slides || !json.title) {
+            throw new Error("Invalid presentation file");
+        }
+
+        communityService.publishDeck(json, 'You (Device)');
+        refreshData();
+        alert("Presentation uploaded to Community Hub successfully!");
+    } catch (err) {
+        alert("Failed to upload: Invalid file format.");
+    } finally {
         setUploading(false);
-        alert("Published to Community Hub successfully!");
-    }, 1500);
+        if(e.target) e.target.value = ''; // Reset input
+    }
+  };
+
+  const handleLike = (id: string) => {
+    const updated = communityService.likeDeck(id);
+    setCommunityDecks(updated);
+  };
+
+  const handleDeletePost = (id: string) => {
+    if (confirm("Are you sure you want to delete this post from the community?")) {
+        const updated = communityService.deleteDeck(id);
+        setCommunityDecks(updated);
+    }
+  };
+
+  const handleHistoryDelete = (title: string) => {
+      if(confirm("Delete this presentation from your history?")) {
+          const updated = communityService.deleteHistory(title);
+          setUserHistory(updated);
+      }
+  }
+
+  const handleShareFromHistory = (p: Presentation) => {
+      if(confirm(`Publish "${p.title}" to Community Hub?`)) {
+          communityService.publishDeck(p, 'You');
+          refreshData();
+          setActiveTab('COMMUNITY');
+      }
+  }
+
+  const handleDownloadJSON = (deck: Presentation | SharedPresentation, isShared: boolean) => {
+    // Increment counter if shared
+    if (isShared) {
+        const d = deck as SharedPresentation;
+        const updated = communityService.incrementDownload(d.id);
+        setCommunityDecks(updated);
+    }
+
+    // Trigger download of JSON
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(deck));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", `${deck.title.replace(/\s+/g, '_')}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
 
   const renderContent = () => {
     switch (activeTab) {
         case 'HOME': // FILE CONVERTER (Default on Mobile)
             return (
-                <div className="w-full max-w-4xl animate-fade-in-up">
-                    <header className="mb-8 lg:mb-12 text-center lg:text-left">
+                <div className="w-full max-w-4xl animate-fade-in-up space-y-8">
+                    <header className="text-center lg:text-left">
                         <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">
                            Transform Documents
                         </h1>
@@ -154,7 +181,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                              <div>
                                 <Label>Slides</Label>
                                 <Select value={slideCount} onChange={(e) => setSlideCount(Number(e.target.value))}>
-                                    {[5, 8, 10, 12, 15].map(n => <option key={n} value={n}>{n} Slides</option>)}
+                                    {[5, 8, 10, 12].map(n => <option key={n} value={n}>{n} Slides</option>)}
                                 </Select>
                              </div>
                          </div>
@@ -167,6 +194,34 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                             Convert to Presentation
                          </Button>
                     </GlassCard>
+
+                    {/* HISTORY SECTION */}
+                    {userHistory.length > 0 && (
+                        <div className="animate-fade-in-up stagger-2">
+                            <h2 className="text-2xl font-bold text-white mb-4 px-2">My Creations</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {userHistory.map((h, idx) => (
+                                    <GlassCard key={idx} className="p-4 flex items-center justify-between bg-slate-800/40 hover:bg-slate-800/60 transition-colors">
+                                        <div className="overflow-hidden mr-4">
+                                            <h3 className="font-bold text-white truncate">{h.title}</h3>
+                                            <p className="text-xs text-slate-400">{h.style} • {h.slides.length} slides</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <button onClick={() => onOpenHistory(h)} className="p-2 rounded-lg bg-sky-500/20 text-sky-400 hover:bg-sky-500/40" title="Open">
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                            </button>
+                                            <button onClick={() => handleShareFromHistory(h)} className="p-2 rounded-lg bg-pink-500/20 text-pink-400 hover:bg-pink-500/40" title="Share to Community">
+                                                <ShareIcon className="w-4 h-4" />
+                                            </button>
+                                            <button onClick={() => handleHistoryDelete(h.title)} className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/40" title="Delete">
+                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </div>
+                                    </GlassCard>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             );
 
@@ -211,7 +266,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                                <input 
                                   type="range" 
                                   min="3" 
-                                  max="15" 
+                                  max="12" 
                                   value={slideCount} 
                                   onChange={(e) => setSlideCount(parseInt(e.target.value))}
                                   className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 mt-4"
@@ -238,18 +293,26 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                             <h1 className="text-3xl font-bold text-white tracking-tight">Community Hub</h1>
                             <p className="text-slate-400 text-sm">Explore, remix, and share decks from around the world.</p>
                         </div>
-                        <Button 
-                            onClick={handleSimulatedUpload} 
-                            disabled={uploading}
-                            className="bg-white/10 border border-white/20 hover:bg-white/20 text-sm px-4"
-                        >
-                            {uploading ? 'Uploading...' : 'Upload to Public'}
-                        </Button>
+                        
+                        <label className="cursor-pointer inline-flex items-center gap-2 bg-white/10 border border-white/20 hover:bg-white/20 text-sm px-4 py-2 rounded-lg transition-colors font-bold">
+                            <UploadIcon className="w-4 h-4" />
+                            <span>Upload JSON Deck</span>
+                            <input type="file" className="hidden" accept=".json" onChange={handleUploadDeck} disabled={uploading} />
+                        </label>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {communityDecks.map((deck) => (
-                            <GlassCard key={deck.id} className="p-0 overflow-hidden group border-white/10 hover:border-sky-500/50 transition-all">
+                            <GlassCard key={deck.id} className="p-0 overflow-hidden group border-white/10 hover:border-sky-500/50 transition-all relative">
+                                {deck.sharedBy === 'You' && (
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); handleDeletePost(deck.id); }}
+                                        className="absolute top-2 right-2 z-10 p-1.5 rounded-full bg-black/50 text-red-400 hover:bg-red-500 hover:text-white opacity-0 group-hover:opacity-100 transition-all"
+                                        title="Delete your post"
+                                    >
+                                        <XIcon className="w-4 h-4" />
+                                    </button>
+                                )}
                                 <div className={`h-32 w-full bg-gradient-to-br ${getGradient(deck.style)} relative`}>
                                     <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
                                     <div className="absolute bottom-3 left-4 right-4">
@@ -260,19 +323,27 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                                 <div className="p-4 bg-slate-900/80">
                                     <div className="flex justify-between items-center text-xs text-slate-400 mb-4">
                                         <div className="flex items-center gap-1">
-                                            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-pink-500 to-orange-500"></div>
-                                            <span>@{deck.sharedBy}</span>
+                                            <div className="w-5 h-5 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 flex items-center justify-center text-[10px] text-white font-bold">
+                                                {deck.sharedBy.charAt(0)}
+                                            </div>
+                                            <span className="truncate max-w-[80px]">@{deck.sharedBy}</span>
                                         </div>
                                         <span>{deck.dateShared}</span>
                                     </div>
                                     <div className="flex gap-2">
-                                        <button className="flex-1 py-2 rounded bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 flex items-center justify-center gap-2">
-                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" /></svg>
+                                        <button 
+                                            onClick={() => handleLike(deck.id)}
+                                            className="flex-1 py-2 rounded bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <svg className="w-3 h-3 text-pink-500" fill="currentColor" viewBox="0 0 20 20"><path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a4 4 0 00-.8 2.4z" /></svg>
                                             {deck.likes}
                                         </button>
-                                        <button className="flex-1 py-2 rounded bg-sky-600/20 hover:bg-sky-600/30 text-xs font-bold text-sky-400 flex items-center justify-center gap-2">
+                                        <button 
+                                            onClick={() => handleDownloadJSON(deck, true)}
+                                            className="flex-1 py-2 rounded bg-sky-600/20 hover:bg-sky-600/30 text-xs font-bold text-sky-400 flex items-center justify-center gap-2 transition-colors"
+                                        >
                                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                                            Download
+                                            Save
                                         </button>
                                     </div>
                                 </div>
@@ -288,7 +359,16 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
     <div className="h-screen w-screen bg-slate-950 text-slate-200 flex flex-col lg:flex-row overflow-hidden font-sans selection:bg-sky-500/30">
       
       {/* High-Tech Loading Overlay */}
-      {isLoading && <LoadingOverlay type={loadingType} />}
+      {isLoading && (
+          <div className="fixed inset-0 z-[100]">
+            <LoadingOverlay type={loadingType} />
+            <div className="absolute bottom-10 left-0 right-0 flex justify-center z-[101]">
+                <button onClick={onCancelLoading} className="px-6 py-2 bg-white/10 border border-white/20 rounded-full text-white hover:bg-white/20 transition-all font-bold text-sm backdrop-blur-md">
+                    Cancel
+                </button>
+            </div>
+          </div>
+      )}
 
       {/* Background Ambience */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -302,7 +382,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
             <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
                <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
             </div>
-            <span className="font-black text-xl tracking-tight text-white">Lumina</span>
+            <span className="font-black text-lg tracking-tight text-white">Lakshya Studio</span>
          </div>
 
          <nav className="flex flex-col flex-1 w-full px-4 space-y-2">
@@ -328,7 +408,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
                  <div className="w-8 h-8 rounded-md bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                  </div>
-                 <span className="font-black text-lg text-white">Lumina</span>
+                 <span className="font-black text-lg text-white">Lakshya Studio</span>
             </div>
              <div className="text-right">
                <p className="text-[10px] uppercase text-slate-500 font-bold">Dev by</p>

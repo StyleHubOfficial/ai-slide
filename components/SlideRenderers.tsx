@@ -69,17 +69,27 @@ const getThemeClasses = (style: PresentationStyle) => {
   }
 };
 
-/* 
-  NOTE: 
-  These components are designed to be rendered in a fixed container of 1280px x 720px.
-  Responsive text sizing (md:text-xl) is largely removed in favor of fixed sizes 
-  because the container itself is scaled via CSS transform in PresentationView.
-*/
+// Generate AI Image URL via Pollinations
+const getAIImageUrl = (prompt: string) => {
+    const encodedPrompt = encodeURIComponent(prompt || 'abstract futuristic geometric background 4k');
+    // No Logo, 1280x720 optimized
+    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true`;
+}
 
 export const TitleSlide: React.FC<SlideProps> = ({ slide, style }) => {
   const theme = getThemeClasses(style);
+  const bgImage = slide.imagePrompt ? getAIImageUrl(slide.imagePrompt) : null;
+
   return (
     <div className={`h-full w-full flex flex-col justify-center items-center text-center p-16 bg-gradient-to-br ${theme.gradient} relative overflow-hidden slide-inner-content`}>
+      {/* AI Background Image with Overlay */}
+      {bgImage && (
+          <>
+            <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${bgImage})` }}></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/60 to-black/90"></div>
+          </>
+      )}
+
       {/* Hi-Tech Grid Overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] opacity-50 pointer-events-none"></div>
       
@@ -87,11 +97,11 @@ export const TitleSlide: React.FC<SlideProps> = ({ slide, style }) => {
       <div className="absolute top-0 left-0 w-full h-1 bg-white/20 animate-scanline opacity-30"></div>
 
       <div className="relative z-10 max-w-5xl">
-        <h1 className={`text-8xl font-black mb-8 uppercase tracking-tighter leading-tight ${theme.text} drop-shadow-[0_0_25px_rgba(0,0,0,0.5)] animate-fade-in-up`}>
+        <h1 className={`text-8xl font-black mb-8 uppercase tracking-tighter leading-tight ${theme.text} drop-shadow-[0_0_25px_rgba(0,0,0,0.8)] animate-fade-in-up`}>
           {slide.title}
         </h1>
         {slide.subtitle && (
-          <div className={`inline-block text-3xl font-light tracking-[0.3em] uppercase ${theme.accent} border-y border-white/10 py-6 px-12 backdrop-blur-sm animate-fade-in-up stagger-2`}>
+          <div className={`inline-block text-3xl font-light tracking-[0.3em] uppercase ${theme.accent} border-y border-white/10 py-6 px-12 backdrop-blur-md bg-black/30 animate-fade-in-up stagger-2 shadow-lg`}>
             {slide.subtitle}
           </div>
         )}
@@ -105,12 +115,14 @@ export const TitleSlide: React.FC<SlideProps> = ({ slide, style }) => {
 
 export const ContentSlide: React.FC<SlideProps> = ({ slide, style }) => {
   const theme = getThemeClasses(style);
+  const bgImage = slide.imagePrompt ? getAIImageUrl(slide.imagePrompt) : null;
+
   return (
     <div className={`h-full w-full p-16 bg-gradient-to-r ${theme.gradient} flex flex-col relative overflow-hidden slide-inner-content`}>
       {/* Background pattern */}
       <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 pointer-events-none bg-[radial-gradient(circle,currentColor_1px,transparent_1px)] bg-[size:20px_20px]"></div>
 
-      <h2 className={`text-6xl font-bold mb-12 uppercase tracking-tight ${theme.text} animate-fade-in-up border-b border-white/10 pb-8 max-w-6xl`}>
+      <h2 className={`text-6xl font-bold mb-12 uppercase tracking-tight ${theme.text} animate-fade-in-up border-b border-white/10 pb-8 max-w-6xl z-10 drop-shadow-md`}>
         {slide.title}
       </h2>
       <div className="flex-1 grid grid-cols-2 gap-16 items-center z-10">
@@ -118,7 +130,7 @@ export const ContentSlide: React.FC<SlideProps> = ({ slide, style }) => {
           {slide.bulletPoints?.map((point, i) => (
             <li 
               key={i} 
-              className={`flex items-start text-3xl ${theme.sub} font-light leading-relaxed animate-fade-in-up`}
+              className={`flex items-start text-3xl ${theme.sub} font-light leading-relaxed animate-fade-in-up drop-shadow-sm`}
               style={{ animationDelay: `${(i+1) * 150}ms` }}
             >
               <span className={`mr-5 mt-3 w-3 h-3 shrink-0 ${theme.accent.replace('text', 'bg')} rotate-45 shadow-[0_0_10px_currentColor]`}></span>
@@ -127,16 +139,21 @@ export const ContentSlide: React.FC<SlideProps> = ({ slide, style }) => {
           ))}
         </ul>
         
-        <div className={`h-full max-h-[500px] w-full rounded-xl border ${theme.border} bg-white/5 backdrop-blur-md flex items-center justify-center relative overflow-hidden group animate-fade-in-up stagger-3 ${theme.glow}`}>
-             <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${theme.gradient}`}></div>
-             {/* Mock Hi-Tech UI inside visual */}
-             <div className="absolute top-6 left-6 w-24 h-1 bg-white/20"></div>
-             <div className="absolute bottom-6 right-6 w-24 h-1 bg-white/20"></div>
-             <div className="absolute top-6 right-6 w-6 h-6 border border-white/20"></div>
+        <div className={`h-full max-h-[500px] w-full rounded-xl border ${theme.border} bg-black/40 backdrop-blur-md flex items-center justify-center relative overflow-hidden group animate-fade-in-up stagger-3 ${theme.glow}`}>
+             {/* AI Image Visual */}
+             {bgImage ? (
+                 <div className="absolute inset-0 bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110" style={{ backgroundImage: `url(${bgImage})` }}></div>
+             ) : (
+                 <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${theme.gradient}`}></div>
+             )}
              
-             <div className="text-7xl opacity-20 font-black -rotate-12 scale-125 text-white mix-blend-overlay transition-transform duration-[10s] group-hover:scale-100">
-                {slide.backgroundImageKeyword || "VISUAL"}
-             </div>
+             {/* Overlay Gradient */}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+
+             {/* Mock Hi-Tech UI inside visual */}
+             <div className="absolute top-6 left-6 w-24 h-1 bg-white/40 z-20"></div>
+             <div className="absolute bottom-6 right-6 w-24 h-1 bg-white/40 z-20"></div>
+             <div className="absolute top-6 right-6 w-6 h-6 border border-white/40 z-20"></div>
         </div>
       </div>
     </div>
@@ -149,11 +166,21 @@ export const ChartSlide: React.FC<SlideProps> = ({ slide, style }) => {
   const maxVal = data?.datasets[0].data.reduce((a, b) => Math.max(a, b), 0) || 100;
   
   return (
-    <div className={`h-full w-full p-16 bg-gradient-to-b ${theme.gradient} flex flex-col slide-inner-content`}>
-      <h2 className={`text-5xl font-bold mb-8 uppercase tracking-widest ${theme.text} text-right border-b border-white/10 pb-6 animate-fade-in-up`}>
+    <div className={`h-full w-full p-16 bg-gradient-to-b ${theme.gradient} flex flex-col slide-inner-content relative`}>
+       {/* Subtle background chart hints */}
+       <div className="absolute bottom-0 left-0 w-full h-1/2 opacity-5 pointer-events-none">
+           {/* Dynamic Bars */}
+           <div className="flex items-end justify-around h-full px-20">
+               {[...Array(10)].map((_, i) => (
+                   <div key={i} className="w-10 bg-white/50 rounded-t-lg" style={{ height: `${Math.random() * 100}%` }}></div>
+               ))}
+           </div>
+       </div>
+
+      <h2 className={`text-5xl font-bold mb-8 uppercase tracking-widest ${theme.text} text-right border-b border-white/10 pb-6 animate-fade-in-up z-10`}>
         {slide.title}
       </h2>
-      <div className="flex-1 flex items-end justify-around gap-8 pb-16 px-12 relative">
+      <div className="flex-1 flex items-end justify-around gap-8 pb-16 px-12 relative z-10">
          {/* Grid Lines */}
          <div className="absolute inset-0 pointer-events-none opacity-10 flex flex-col justify-end pb-16 px-12">
              <div className="w-full h-px bg-white mb-[20%]"></div>
@@ -177,7 +204,7 @@ export const ChartSlide: React.FC<SlideProps> = ({ slide, style }) => {
                     <div className="absolute inset-0 bg-gradient-to-t from-transparent to-white/20 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                  </div>
                  {/* Floating Value */}
-                 <span className="absolute bottom-[calc(100%+10px)] text-3xl font-black text-white/20 group-hover:text-white transition-colors animate-fade-in-up" style={{ bottom: `${heightPerc + 2}%`, animationDelay: `${i * 150 + 600}ms` }}>
+                 <span className="absolute bottom-[calc(100%+10px)] text-3xl font-black text-white/40 group-hover:text-white transition-colors animate-fade-in-up" style={{ bottom: `${heightPerc + 2}%`, animationDelay: `${i * 150 + 600}ms` }}>
                     {val}
                  </span>
               </div>
@@ -226,11 +253,16 @@ export const TableSlide: React.FC<SlideProps> = ({ slide, style }) => {
 export const ProcessSlide: React.FC<SlideProps> = ({ slide, style }) => {
   const theme = getThemeClasses(style);
   return (
-    <div className={`h-full w-full p-16 bg-gradient-to-tr ${theme.gradient} flex flex-col slide-inner-content`}>
-      <h2 className={`text-6xl font-bold mb-24 text-center uppercase tracking-[0.2em] ${theme.text} animate-fade-in-up`}>
+    <div className={`h-full w-full p-16 bg-gradient-to-tr ${theme.gradient} flex flex-col slide-inner-content relative overflow-hidden`}>
+      {/* Subtle Flow background */}
+      <svg className="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none animate-pulse" style={{ animationDuration: '10s' }}>
+          <path d="M0,360 C300,100 800,600 1280,360" fill="none" stroke="currentColor" strokeWidth="2" className={theme.text} />
+      </svg>
+
+      <h2 className={`text-6xl font-bold mb-24 text-center uppercase tracking-[0.2em] ${theme.text} animate-fade-in-up relative z-10`}>
         {slide.title}
       </h2>
-      <div className="flex-1 flex items-center justify-center relative px-12 gap-16">
+      <div className="flex-1 flex items-center justify-center relative px-12 gap-16 z-10">
          {/* Connecting Line */}
          <div className="absolute top-[50px] left-[10%] right-[10%] h-1 bg-white/10 -z-0">
             <div className="absolute top-0 left-0 h-full bg-current w-full animate-pulse opacity-50 scale-x-0 animate-grow-up" style={{ transformOrigin: 'left' }}></div>
@@ -239,8 +271,10 @@ export const ProcessSlide: React.FC<SlideProps> = ({ slide, style }) => {
          {slide.processSteps?.map((step, i) => (
            <div key={i} className="relative z-10 flex flex-col items-center text-center w-full max-w-[320px] group animate-fade-in-up" style={{ animationDelay: `${i * 200 + 300}ms` }}>
              {/* Icon/Number Node */}
-             <div className={`w-24 h-24 shrink-0 rounded-2xl flex items-center justify-center text-4xl font-bold mb-10 ${theme.bg} border-2 ${theme.border} ${theme.accent} shadow-[0_0_30px_currentColor] group-hover:scale-110 group-hover:rotate-3 transition-all duration-300`}>
+             <div className={`w-24 h-24 shrink-0 rounded-2xl flex items-center justify-center text-4xl font-bold mb-10 ${theme.bg} border-2 ${theme.border} ${theme.accent} shadow-[0_0_30px_currentColor] group-hover:scale-110 group-hover:rotate-3 transition-all duration-300 relative`}>
                {i + 1}
+               {/* Node Glow */}
+               <div className="absolute inset-0 rounded-2xl bg-current opacity-0 group-hover:opacity-20 transition-opacity blur-md"></div>
              </div>
              <div>
                <h3 className="text-3xl font-bold text-white mb-4">{step.title}</h3>

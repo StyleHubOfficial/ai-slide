@@ -1,12 +1,15 @@
+
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Presentation, PresentationStyle, TransitionStyle } from '../types';
 import { SlideRenderer } from './SlideRenderers';
+import { communityService } from '../services/communityService';
 import Button from './ui/Button';
 import Select from './ui/Select';
 import XIcon from './icons/XIcon';
 import PenIcon from './icons/PenIcon';
 import EraserIcon from './icons/EraserIcon';
 import PresenterIcon from './icons/PresenterIcon';
+import ShareIcon from './icons/ShareIcon';
 import PptxGenJS from 'pptxgenjs';
 import Spinner from './ui/Spinner';
 import CanvasDraw from './ui/CanvasDraw';
@@ -75,7 +78,9 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       // Calculate standard 16:9 fit
       const scaleX = clientWidth / BASE_WIDTH;
       const scaleY = clientHeight / BASE_HEIGHT;
-      setScale(Math.min(scaleX, scaleY) * 0.95); // 0.95 for small margin
+      
+      // Increased scale factor to 0.98 for "Bigger/Fit" view
+      setScale(Math.min(scaleX, scaleY) * 0.98); 
     };
 
     window.addEventListener('resize', handleResize);
@@ -90,9 +95,18 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
     }
   };
 
-  const handleExportPDF = () => {
-    window.print();
+  const handleShareToCommunity = () => {
+    if (confirm("Publish this presentation to the public Community Hub?")) {
+        communityService.publishDeck(presentation, 'You');
+        alert("Published successfully! Check the Community tab.");
+    }
   };
+  
+  // Simplified Exit Logic (Working Button)
+  const handleExit = () => {
+      // Just exit. We assume autosave handles the data safety.
+      onClose();
+  }
 
   const handleExportPPT = async () => {
     if (isExporting) return;
@@ -101,21 +115,26 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       const pptx = new PptxGenJS();
       pptx.layout = 'LAYOUT_16x9';
       pptx.title = presentation.title;
-      pptx.author = "Lumina AI - Lakshya";
+      pptx.author = "Lakshya Presentation Studio"; // Updated Author
 
       const colors = getPPTXColors(activeStyle);
 
       presentation.slides.forEach((slide) => {
         const pptSlide = pptx.addSlide();
         pptSlide.background = { color: colors.bg };
-        // (Previous PPTX Export Logic - Abbreviated for brevity but functionality preserved)
-        // Title
+        
         pptSlide.addText(slide.title || "Untitled Slide", { x: 0.5, y: 0.3, w: '90%', h: 1, fontSize: 36, color: colors.text, align: 'center', isTextBox: true });
         if (slide.speakerNotes) pptSlide.addNotes(slide.speakerNotes);
-        // ... (Mapping Logic remains similar to previous iteration)
+        
+        // Basic Content Mapping
+        if (slide.bulletPoints) {
+            slide.bulletPoints.forEach((point, i) => {
+                pptSlide.addText(point, { x: 1, y: 1.8 + (i * 0.5), w: '80%', h: 0.5, fontSize: 18, color: colors.sub, bullet: true });
+            });
+        }
       });
 
-      await pptx.writeFile({ fileName: `${presentation.title.replace(/\s+/g, '_')}_Lumina.pptx` });
+      await pptx.writeFile({ fileName: `${presentation.title.replace(/\s+/g, '_')}_Lakshya.pptx` });
     } catch (e) {
       console.error("PPT Export Error", e);
       alert("Failed to export PPTX.");
@@ -130,7 +149,7 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       if (e.key === 'ArrowLeft') prevSlide();
       if (e.key === 'Escape') {
          if (viewMode === 'GRID' || viewMode === 'PRESENTER') setViewMode('SLIDE');
-         else onClose();
+         else handleExit();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -154,12 +173,12 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
          ))}
       </div>
 
-      {/* --- TOP TOOLBAR (Hidden in Mobile, visible in Desktop) --- */}
+      {/* --- TOP TOOLBAR (Desktop) --- */}
       {showControls && (
         <div className="no-print hidden md:flex h-16 bg-slate-900/90 backdrop-blur-md border-b border-white/10 items-center justify-between px-6 shrink-0 z-50">
           <div className="flex items-center gap-6">
-             <button onClick={onClose} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-bold uppercase tracking-wider">
-               <div className="p-1 bg-white/10 rounded-full"><XIcon className="w-4 h-4" /></div>
+             <button onClick={handleExit} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-bold uppercase tracking-wider group">
+               <div className="p-1 bg-white/10 rounded-full group-hover:bg-white/20 transition-colors"><XIcon className="w-4 h-4" /></div>
                Exit
              </button>
              <div className="h-6 w-px bg-white/10"></div>
@@ -199,6 +218,14 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
                 <option value="cube">Cube</option>
              </Select>
              
+             <button 
+                onClick={handleShareToCommunity}
+                className="h-9 px-3 rounded bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/50 text-pink-400 flex items-center gap-2 transition-colors"
+                title="Publish to Community"
+             >
+                <ShareIcon className="w-4 h-4" />
+             </button>
+
              <Button onClick={handleExportPPT} disabled={isExporting} className="h-9 px-4 text-xs bg-sky-600 border border-sky-500 flex items-center gap-2 whitespace-nowrap">
                 {isExporting ? <Spinner className="w-3 h-3" /> : 'Export PPTX'}
              </Button>
@@ -210,9 +237,12 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       <div className="no-print flex-1 relative bg-black overflow-hidden flex flex-col" ref={containerRef} onMouseMove={handleMouseMove}>
         
         {/* Mobile Top Bar (Close Button) */}
-        <div className="md:hidden absolute top-4 left-4 z-[60]">
-           <button onClick={onClose} className="p-2 rounded-full bg-black/50 border border-white/20 text-white/80 backdrop-blur">
+        <div className="md:hidden absolute top-4 left-4 z-[60] flex items-center gap-2">
+           <button onClick={handleExit} className="p-2 rounded-full bg-black/50 border border-white/20 text-white/80 backdrop-blur">
                <XIcon className="w-5 h-5" />
+           </button>
+           <button onClick={handleShareToCommunity} className="p-2 rounded-full bg-pink-500/50 border border-pink-400/20 text-white/80 backdrop-blur">
+               <ShareIcon className="w-5 h-5" />
            </button>
         </div>
 
