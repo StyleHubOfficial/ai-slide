@@ -7,7 +7,7 @@ export enum PresentationStyle {
   Nature = "Nature"
 }
 
-export type TransitionStyle = 'fade' | 'zoom' | 'hologram' | 'shutter';
+export type TransitionStyle = 'fade' | 'zoom' | 'hologram' | 'shutter' | 'glitch' | 'cube';
 
 export type SlideType = 'title' | 'content' | 'chart' | 'table' | 'process';
 

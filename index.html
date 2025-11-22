@@ -22,16 +22,30 @@
         background: #475569; 
       }
 
-      /* Animations */
+      /* --- CINEMATIC ANIMATIONS --- */
+
+      /* 1. Fade Up */
       @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
       }
       .animate-fade-in-up {
         animation: fade-in-up 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-        opacity: 0; /* Ensure hidden initially */
+        opacity: 0;
+      }
+
+      /* 2. Chart Grow */
+      @keyframes grow-up {
+        from { transform: scaleY(0); }
+        to { transform: scaleY(1); }
+      }
+      .animate-grow-up {
+        transform-origin: bottom;
+        animation: grow-up 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        transform: scaleY(0);
       }
       
+      /* 3. Glow Pulse */
       @keyframes glow {
         0%, 100% { box-shadow: 0 0 5px rgba(56, 189, 248, 0.2); }
         50% { box-shadow: 0 0 20px rgba(56, 189, 248, 0.6); }
@@ -40,13 +54,24 @@
         animation: glow 3s infinite;
       }
 
+      /* 4. Scanline Move */
+      @keyframes scanline {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(100%); }
+      }
+      .animate-scanline {
+        animation: scanline 3s linear infinite;
+      }
+
       .glass-panel {
         background: rgba(15, 23, 42, 0.6);
         backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
 
-      /* Cinematic Slide Transitions */
+      /* --- TRANSITIONS --- */
+
+      /* Fade */
       @keyframes slide-enter-fade {
         0% { opacity: 0; filter: blur(10px); }
         100% { opacity: 1; filter: blur(0); }
@@ -55,6 +80,7 @@
         animation: slide-enter-fade 0.7s cubic-bezier(0.4, 0, 0.2, 1) both;
       }
 
+      /* Zoom */
       @keyframes slide-enter-zoom {
         0% { opacity: 0; transform: scale(1.1) translateY(20px); filter: blur(4px); }
         100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
@@ -63,6 +89,7 @@
         animation: slide-enter-zoom 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
       }
 
+      /* Hologram */
       @keyframes slide-enter-hologram {
         0% { opacity: 0; transform: scaleY(0.1) scaleX(1.2); filter: hue-rotate(90deg) brightness(2); }
         30% { opacity: 0.5; transform: scaleY(1.1) scaleX(0.9); }
@@ -73,22 +100,46 @@
         animation: slide-enter-hologram 0.6s ease-out both;
       }
 
+      /* Shutter */
       @keyframes slide-enter-shutter {
-        0% { clip-path: inset(0 100% 0 0); transform: translateX(50px); }
-        100% { clip-path: inset(0 0 0 0); transform: translateX(0); }
+        0% { clip-path: circle(0% at 50% 50%); filter: grayscale(1); }
+        100% { clip-path: circle(150% at 50% 50%); filter: grayscale(0); }
       }
       .slide-enter-shutter {
-        animation: slide-enter-shutter 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: slide-enter-shutter 1s cubic-bezier(0.77, 0, 0.175, 1) both;
       }
 
-      /* Stagger Utility for children */
+      /* Glitch */
+      @keyframes slide-enter-glitch {
+        0% { opacity: 0; transform: translateX(-20px); clip-path: inset(0 0 0 0); }
+        20% { opacity: 1; transform: translateX(20px); clip-path: inset(20% 0 50% 0); }
+        40% { transform: translateX(-10px); clip-path: inset(60% 0 10% 0); }
+        60% { transform: translateX(10px); clip-path: inset(10% 0 80% 0); }
+        80% { transform: translateX(-5px); clip-path: inset(0 0 0 0); }
+        100% { opacity: 1; transform: translateX(0); clip-path: inset(0 0 0 0); }
+      }
+      .slide-enter-glitch {
+        animation: slide-enter-glitch 0.4s steps(5) both;
+      }
+
+      /* Cube (Simulated) */
+      @keyframes slide-enter-cube {
+        0% { opacity: 0; transform: perspective(1000px) rotateY(90deg); transform-origin: left; }
+        100% { opacity: 1; transform: perspective(1000px) rotateY(0deg); transform-origin: left; }
+      }
+      .slide-enter-cube {
+        animation: slide-enter-cube 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+      }
+
+
+      /* Stagger Utility */
       .stagger-1 { animation-delay: 100ms; }
       .stagger-2 { animation-delay: 200ms; }
       .stagger-3 { animation-delay: 300ms; }
       .stagger-4 { animation-delay: 400ms; }
       .stagger-5 { animation-delay: 500ms; }
 
-      /* Print Styles */
+      /* Print Styles - Crucial for PDF Export */
       @page {
         size: landscape;
         margin: 0;
@@ -97,31 +148,42 @@
         body {
           background: white !important;
           color: black !important;
-          overflow: visible !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
         }
         #root {
           height: auto !important;
           width: 100% !important;
           overflow: visible !important;
         }
-        .no-print {
+        /* Hide UI elements */
+        .no-print, button, nav, .sidebar-hidden-print {
           display: none !important;
         }
         .print-only {
           display: block !important;
         }
-        /* Ensure graphics print */
+        /* Force Backgrounds */
         * {
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
         }
-        /* Break pages */
+        /* Page Break Logic */
         .slide-print-wrapper {
           break-after: page;
           page-break-after: always;
           height: 100vh;
           width: 100vw;
           overflow: hidden;
+          position: relative;
+          left: 0;
+          top: 0;
+        }
+        /* Reset layout for print */
+        .slide-inner-content {
+          height: 100% !important;
+          width: 100% !important;
+          transform: none !important;
         }
       }
       
