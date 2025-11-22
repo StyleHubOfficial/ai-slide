@@ -42,6 +42,7 @@ export interface Slide {
   processSteps?: ProcessStep[];
   backgroundImageKeyword?: string; 
   layout?: 'left' | 'right' | 'center' | 'split';
+  speakerNotes?: string; // New field for presenter mode
 }
 
 export interface Presentation {

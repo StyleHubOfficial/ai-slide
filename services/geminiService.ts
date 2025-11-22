@@ -4,11 +4,8 @@ import type { GenerationParams, Presentation, Slide } from '../types';
 
 export async function generatePresentation(params: GenerationParams): Promise<Presentation> {
   // enhanced-env-check
-  // On Vercel/Vite, variables often need the VITE_ prefix to be exposed to the browser.
-  // We check both standard process.env and import.meta.env (Vite standard) to be robust.
   let apiKey = process.env.API_KEY;
   
-  // Fallback for Vite environments if process.env isn't populated
   if (!apiKey && typeof import.meta !== 'undefined' && (import.meta as any).env) {
     apiKey = (import.meta as any).env.VITE_API_KEY;
   }
@@ -39,6 +36,8 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
     - 'table': A slide with structured data in rows/cols.
     - 'process': A step-by-step diagram flow.
 
+    CRITICAL: Include 'speakerNotes' for EVERY slide. These notes should be conversational, professional, and helpful for a presenter explaining the slide.
+
     For 'chart' slides, provide numerical data and labels.
     For 'process' slides, provide 3-5 steps.
     
@@ -68,6 +67,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
                   bulletPoints: { type: 'ARRAY', items: { type: 'STRING' } },
                   layout: { type: 'STRING' },
                   backgroundImageKeyword: { type: 'STRING' },
+                  speakerNotes: { type: 'STRING' },
                   chartData: {
                     type: 'OBJECT',
                     properties: {
@@ -104,7 +104,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
                     }
                   }
                 },
-                required: ['id', 'type', 'title']
+                required: ['id', 'type', 'title', 'speakerNotes']
               }
             }
           },
@@ -119,12 +119,11 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
        throw new Error("AI returned empty response.");
     }
 
-    // Clean Markdown Code Blocks (common cause of JSON.parse errors)
+    // Clean Markdown Code Blocks
     jsonString = jsonString.replace(/^```json\s*/, "").replace(/```\s*$/, "");
 
     const parsed = JSON.parse(jsonString);
     
-    // Enhance with original params
     return {
       ...parsed,
       topic,
@@ -132,7 +131,6 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
     };
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);
-    // Pass specific error message if available
     throw new Error(error.message || "Failed to engineer the presentation structure.");
   }
 }
