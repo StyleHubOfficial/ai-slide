@@ -14,11 +14,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number, apiKey: string) => {
+  const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await generatePresentation({ topic, style, fileContext, slideCount, apiKey });
+      const data = await generatePresentation({ topic, style, fileContext, slideCount });
       setPresentation(data);
       setView('PRESENT');
     } catch (err) {

@@ -3,15 +3,10 @@ import { GoogleGenAI } from "@google/genai";
 import type { GenerationParams, Presentation, Slide } from '../types';
 
 export async function generatePresentation(params: GenerationParams): Promise<Presentation> {
-  // 1. Validate API Key Safe Check
-  // Prioritize the key passed from the UI, then check environment variable.
-  const apiKey = params.apiKey || (typeof process !== 'undefined' && process.env && process.env.API_KEY);
-
-  if (!apiKey) {
-    throw new Error("API Key is required. Please enter it in the settings or configure your environment.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: apiKey });
+  // Securely use the environment variable.
+  // The user must set API_KEY in their environment (Vercel or .env).
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  
   const { topic, style, fileContext, slideCount } = params;
 
   const prompt = `

@@ -57,5 +57,4 @@ export interface GenerationParams {
   style: PresentationStyle;
   fileContext?: string; // Content from uploaded file
   slideCount: number;
-  apiKey?: string; // User provided API key
 }
