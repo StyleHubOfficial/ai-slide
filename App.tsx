@@ -14,11 +14,11 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => {
+  const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number, apiKey: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await generatePresentation({ topic, style, fileContext, slideCount });
+      const data = await generatePresentation({ topic, style, fileContext, slideCount, apiKey });
       setPresentation(data);
       setView('PRESENT');
     } catch (err) {
@@ -58,16 +58,6 @@ function App() {
               {error}
             </p>
             
-            {error.includes("API_KEY") && (
-              <div className="bg-red-900/20 border border-red-900/50 rounded-lg p-4 mb-6 text-sm text-red-200">
-                <strong>Config Required:</strong> The Application Key is missing from the environment.
-                <ul className="list-disc pl-5 mt-2 space-y-1 text-red-300/80">
-                  <li>If on <strong>Vercel</strong>: Go to Settings &rarr; Environment Variables &rarr; Add <code>API_KEY</code>.</li>
-                  <li>If <strong>Local</strong>: Ensure you have a <code>.env</code> file or the key is exported in your shell.</li>
-                </ul>
-              </div>
-            )}
-
             <div className="flex justify-end">
               <Button onClick={() => setError(null)} className="bg-slate-800 hover:bg-slate-700">
                 Dismiss

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { PresentationStyle } from '../types';
 import GlassCard from './ui/GlassCard';
@@ -8,7 +9,7 @@ import Textarea from './ui/Textarea';
 import Spinner from './ui/Spinner';
 
 interface CreationStudioProps {
-  onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => void;
+  onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number, apiKey: string) => void;
   isLoading: boolean;
 }
 
@@ -18,6 +19,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
   const [fileContext, setFileContext] = useState('');
   const [fileName, setFileName] = useState('');
   const [slideCount, setSlideCount] = useState(6);
+  const [apiKey, setApiKey] = useState('');
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,6 +52,19 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
       <GlassCard className="w-full max-w-2xl animate-fade-in-up" style={{ animationDelay: '0.1s' }}>
         <div className="space-y-6 md:space-y-8">
           
+          {/* API Key Input */}
+          <div>
+             <Label className="text-sky-300 uppercase tracking-wider text-xs font-bold">Google Gemini API Key</Label>
+             <input 
+               type="password" 
+               value={apiKey} 
+               onChange={(e) => setApiKey(e.target.value)}
+               placeholder="Paste your API key here (starts with AIza...)"
+               className="block w-full rounded-md border-0 bg-white/5 py-2 px-3 text-slate-200 shadow-sm ring-1 ring-inset ring-slate-700 focus:ring-2 focus:ring-inset focus:ring-sky-500 sm:text-sm sm:leading-6 placeholder:text-slate-600"
+             />
+             <p className="text-[10px] text-slate-500 mt-1">Required to generate content. Get one at aistudio.google.com</p>
+          </div>
+
           {/* Topic */}
           <div>
             <Label className="text-sky-300 uppercase tracking-wider text-xs font-bold">Presentation Topic</Label>
@@ -109,7 +124,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, isLoading }) 
           </div>
 
           <Button 
-            onClick={() => onCreate(topic, style, fileContext, slideCount)} 
+            onClick={() => onCreate(topic, style, fileContext, slideCount, apiKey)} 
             disabled={isLoading || !topic}
             className="w-full h-12 md:h-14 text-base md:text-lg bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.4)] border border-white/10"
           >
