@@ -209,6 +209,8 @@
           color: black !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
+          margin: 0;
+          padding: 0;
         }
         #root {
           height: auto !important;
@@ -216,7 +218,7 @@
           overflow: visible !important;
         }
         /* Hide UI elements */
-        .no-print, button, nav, .sidebar-hidden-print {
+        .no-print, button, nav, .sidebar-hidden-print, aside {
           display: none !important;
         }
         .print-only {
@@ -235,8 +237,7 @@
           width: 100vw;
           overflow: hidden;
           position: relative;
-          left: 0;
-          top: 0;
+          background-color: #0f172a; /* Fallback */
         }
         /* Reset layout for print */
         .slide-inner-content {

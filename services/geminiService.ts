@@ -1,3 +1,4 @@
+
 import { GoogleGenAI } from "@google/genai";
 import type { GenerationParams, Presentation, Slide } from '../types';
 
@@ -20,48 +21,41 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
   const { topic, style, fileContext, slideCount } = params;
 
   // Enforce a hard limit on slide count for stability
-  const safeSlideCount = Math.min(slideCount, 12);
+  const safeSlideCount = Math.min(slideCount, 15);
 
   const prompt = `
-    Act as a world-class high-tech presentation designer. 
-    Create a detailed presentation about "${topic}".
+    Role: Elite Presentation Strategist & Information Designer.
+    Task: Create a highly detailed, fact-based, and visually captivating presentation deck.
+    Topic: "${topic}".
     Style: ${style}.
     Target Slide Count: ${safeSlideCount}.
     
-    ${fileContext ? `Context from uploaded file: ${fileContext.slice(0, 3000)}...` : ''}
+    ${fileContext ? `CRITICAL SOURCE MATERIAL:\n${fileContext}\n\nINSTRUCTION: You MUST base the presentation structure, facts, and content PRIMARILY on the Source Material above. Do not hallucinate facts if the source provides them. Interpret the source into professional slide content.` : 'INSTRUCTION: Generate specific, factual, and high-value content based on the topic. Avoid generic fluff.'}
 
-    Generate a valid JSON object representing the presentation. 
-    For each slide, generate an 'imagePrompt' that describes a cinematic, high-quality, abstract or literal visual background/illustration for that slide. The image prompt should be optimized for an AI image generator (e.g., "futuristic glowing data nodes, neon blue and purple, 8k render, cinematic lighting").
-
-    CRITICAL OUTPUT CONSTRAINTS (To prevent JSON truncation):
-    1. **Speaker Notes**: Max 2 short sentences per slide.
-    2. **Bullet Points**: Max 4 items per slide. Max 10 words per item.
-    3. **Process Steps**: Max 4 steps.
-    4. **Chart Data**: Max 5 data points.
-    5. **Process**: Keep descriptions under 15 words.
-    6. **Image Prompts**: Keep under 20 words.
+    DESIGN RULES:
+    1. **Content Accuracy**: Be precise. Use professional terminology. Break down complex ideas into bullet points.
+    2. **Visuals**: For 'imagePrompt', write a detailed, cinematic AI image prompt (e.g., "Photorealistic 8k render of..., dramatic lighting, high tech interface") that perfectly visualizes the slide's key insight.
+    3. **Speaker Notes**: Write a compelling script for the presenter to deliver, adding depth to the visual points.
     
-    Return ONLY the JSON object with this structure:
+    JSON STRUCTURE (Strictly follow this):
     {
-      "title": "String",
-      "author": "String",
+      "title": "String (Catchy Title)",
+      "author": "String (Presenter Name)",
       "slides": [
         {
-          "id": "String",
+          "id": "String (unique)",
           "type": "title|content|chart|table|process",
-          "title": "String",
-          "subtitle": "String (optional)",
+          "title": "String (Headline)",
+          "subtitle": "String (Optional sub-headline)",
           "bulletPoints": ["String"],
-          "imagePrompt": "String (AI visual description)",
-          "speakerNotes": "String",
+          "imagePrompt": "String (Detailed Visual description for AI generation)",
+          "speakerNotes": "String (Script)",
           "chartData": { "labels": [], "datasets": [{ "label": "", "data": [] }] },
           "tableData": { "headers": [], "rows": [] },
           "processSteps": [{ "title": "", "description": "" }]
         }
       ]
     }
-    
-    DO NOT wrap in markdown code blocks. Just raw JSON.
   `;
 
   try {
@@ -69,7 +63,6 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
       model: 'gemini-2.5-flash',
       contents: { parts: [{ text: prompt }] },
       config: {
-        // Maximize output tokens to prevent cut-off
         maxOutputTokens: 8192, 
         responseMimeType: "application/json",
       }
@@ -81,11 +74,17 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
        throw new Error("AI returned empty response.");
     }
 
-    // Clean Markdown Code Blocks (just in case)
+    // Clean Markdown Code Blocks
     jsonString = jsonString.replace(/^```json\s*/, "").replace(/```\s*$/, "");
 
     try {
       const parsed = JSON.parse(jsonString);
+      
+      // Post-processing to ensure stability
+      if (!parsed.slides || !Array.isArray(parsed.slides)) {
+          throw new Error("Invalid structure");
+      }
+
       return {
         ...parsed,
         topic,
@@ -93,12 +92,11 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
       };
     } catch (parseError) {
       console.error("JSON Parse Error:", parseError);
-      console.error("Raw JSON string length:", jsonString.length);
-      throw new Error("The presentation was too complex for the AI to finish. Please try reducing the slide count (e.g. to 5) or simplifying the topic.");
+      throw new Error("The AI response was incomplete. Please try reducing the slide count.");
     }
 
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);
-    throw new Error(error.message || "Failed to engineer the presentation structure.");
+    throw new Error(error.message || "Failed to generate presentation.");
   }
 }

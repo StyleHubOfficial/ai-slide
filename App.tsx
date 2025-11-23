@@ -19,9 +19,9 @@ function App() {
     setIsLoading(true);
     setError(null);
     
-    // Timeout Promise to prevent infinite loading
+    // Timeout Promise extended to 120s to allow for deep thinking and image generation
     const timeout = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Generation timed out. The server is busy or the request was too complex. Try fewer slides.")), 45000)
+        setTimeout(() => reject(new Error("Generation timed out. The request was too complex. Please try again.")), 120000)
     );
 
     try {
@@ -54,14 +54,13 @@ function App() {
   };
 
   const handleClosePresentation = () => {
-    // Exit immediately without confirm dialog for better UX ("Cancel Button Working")
+    // Exit immediately without confirm dialog for better UX
     setView('CREATE');
     setPresentation(null);
   };
   
   const handleCancelLoading = () => {
       setIsLoading(false);
-      // Force state reset by triggering error manually or just resetting
       setError("Generation cancelled by user.");
   };
 
