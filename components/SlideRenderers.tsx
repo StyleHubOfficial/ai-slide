@@ -7,130 +7,164 @@ interface SlideProps {
   style: PresentationStyle;
 }
 
-// Helper to get style-based classes
-const getThemeClasses = (style: PresentationStyle) => {
+// Helper to get sophisticated theme visuals
+const getThemeVisuals = (style: PresentationStyle) => {
   switch (style) {
-    case PresentationStyle.Cyberpunk:
+    case PresentationStyle.NeonGrid:
       return {
-        bg: 'bg-slate-900',
-        text: 'text-cyan-400',
+        // Cyberpunk Grid Pattern
+        containerClass: 'bg-slate-950 text-cyan-400',
+        bgStyle: {
+          backgroundImage: `
+            linear-gradient(rgba(6, 182, 212, 0.15) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(6, 182, 212, 0.15) 1px, transparent 1px),
+            radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0) 0%, rgba(15, 23, 42, 1) 90%)
+          `,
+          backgroundSize: '40px 40px, 40px 40px, 100% 100%'
+        },
+        text: 'text-cyan-400 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]',
         accent: 'text-fuchsia-500',
         sub: 'text-cyan-100',
-        gradient: 'from-cyan-950 via-slate-900 to-fuchsia-950',
         border: 'border-cyan-500/30',
-        glow: 'shadow-[0_0_30px_rgba(34,211,238,0.1)]',
+        glass: 'bg-slate-900/80 border-cyan-500/20 shadow-[0_0_30px_rgba(34,211,238,0.1)]',
         chartColor: 'bg-cyan-500',
-        glass: 'bg-slate-950/80 border-cyan-500/20'
+        processCircle: 'bg-slate-900 border-cyan-500 text-cyan-400'
       };
-    case PresentationStyle.Corporate:
+    case PresentationStyle.DarkDots:
       return {
-        bg: 'bg-slate-800',
-        text: 'text-white',
-        accent: 'text-blue-400',
-        sub: 'text-slate-100',
-        gradient: 'from-blue-950 via-slate-900 to-slate-950',
-        border: 'border-blue-500/20',
-        glow: 'shadow-[0_0_30px_rgba(59,130,246,0.1)]',
-        chartColor: 'bg-blue-500',
-        glass: 'bg-slate-900/80 border-blue-500/10'
+        // Minimalist Dot Matrix
+        containerClass: 'bg-zinc-950 text-zinc-100',
+        bgStyle: {
+          backgroundImage: 'radial-gradient(rgba(113, 113, 122, 0.3) 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        },
+        text: 'text-zinc-100 font-bold tracking-tight',
+        accent: 'text-white',
+        sub: 'text-zinc-400',
+        border: 'border-zinc-700',
+        glass: 'bg-black/60 border-zinc-800 backdrop-blur-md shadow-xl',
+        chartColor: 'bg-zinc-100',
+        processCircle: 'bg-zinc-900 border-zinc-500 text-zinc-200'
+      };
+    case PresentationStyle.GeoPoly:
+      return {
+        // Abstract Geometric Shapes
+        containerClass: 'bg-indigo-950 text-indigo-100',
+        bgStyle: {
+          backgroundImage: `
+            repeating-linear-gradient(45deg, rgba(99, 102, 241, 0.05) 0px, rgba(99, 102, 241, 0.05) 2px, transparent 2px, transparent 20px),
+            repeating-linear-gradient(-45deg, rgba(168, 85, 247, 0.05) 0px, rgba(168, 85, 247, 0.05) 2px, transparent 2px, transparent 20px)
+          `,
+          backgroundSize: '100% 100%'
+        },
+        text: 'text-indigo-200 font-serif',
+        accent: 'text-violet-400',
+        sub: 'text-indigo-100/80',
+        border: 'border-indigo-500/30',
+        glass: 'bg-slate-900/40 border-indigo-400/30 backdrop-blur-lg',
+        chartColor: 'bg-indigo-500',
+        processCircle: 'bg-indigo-900 border-indigo-400 text-indigo-300'
       };
     case PresentationStyle.Minimalist:
       return {
-        bg: 'bg-zinc-900',
-        text: 'text-zinc-100',
-        accent: 'text-zinc-400',
-        sub: 'text-zinc-300',
-        gradient: 'from-zinc-800 to-zinc-900',
-        border: 'border-zinc-700',
-        glow: '',
-        chartColor: 'bg-zinc-400',
-        glass: 'bg-black/70 border-zinc-700/50'
+        // Clean White Paper Style
+        containerClass: 'bg-slate-50 text-slate-900',
+        bgStyle: {
+             backgroundColor: '#f8fafc',
+             backgroundImage: 'linear-gradient(#e2e8f0 1px, transparent 1px), linear-gradient(90deg, #e2e8f0 1px, transparent 1px)',
+             backgroundSize: '50px 50px'
+        },
+        text: 'text-slate-900 font-bold',
+        accent: 'text-sky-600',
+        sub: 'text-slate-600',
+        border: 'border-slate-200',
+        glass: 'bg-white/80 border-slate-200 shadow-lg backdrop-blur-sm',
+        chartColor: 'bg-sky-600',
+        processCircle: 'bg-white border-slate-300 text-slate-700'
       };
-    case PresentationStyle.Nature:
-        return {
-          bg: 'bg-stone-900',
-          text: 'text-emerald-100',
-          accent: 'text-emerald-400',
-          sub: 'text-emerald-50',
-          gradient: 'from-emerald-950 via-stone-900 to-stone-950',
-          border: 'border-emerald-500/20',
-          glow: 'shadow-[0_0_30px_rgba(52,211,153,0.1)]',
-          chartColor: 'bg-emerald-500',
-          glass: 'bg-stone-900/80 border-emerald-500/20'
-        };
-    case PresentationStyle.Futuristic:
+    case PresentationStyle.SoftGradient:
     default:
       return {
-        bg: 'bg-black',
-        text: 'text-indigo-200',
-        accent: 'text-violet-400',
-        sub: 'text-indigo-100',
-        gradient: 'from-indigo-950 via-slate-950 to-black',
-        border: 'border-indigo-500/40',
-        glow: 'shadow-[0_0_30px_rgba(99,102,241,0.15)]',
-        chartColor: 'bg-indigo-500',
-        glass: 'bg-slate-950/80 border-indigo-500/30'
+        // Modern Liquid Gradient
+        containerClass: 'bg-slate-900 text-white',
+        bgStyle: {
+          background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%)'
+        },
+        text: 'text-white font-sans',
+        accent: 'text-pink-400',
+        sub: 'text-slate-200',
+        border: 'border-white/10',
+        glass: 'bg-white/5 border-white/10 backdrop-blur-xl shadow-2xl',
+        chartColor: 'bg-pink-500',
+        processCircle: 'bg-white/10 border-pink-400 text-white'
       };
   }
 };
 
 export const getAIImageUrl = (prompt: string) => {
-    // Adding keywords to ensure high quality cinematic 3d render style
-    const enhancedPrompt = `${prompt}, cinematic lighting, highly detailed, 8k, unreal engine render, photorealistic, professional`;
+    // Enhanced prompts for better generation
+    const enhancedPrompt = `${prompt}, cinematic lighting, highly detailed, 8k, unreal engine render, photorealistic, professional, minimalist background`;
     const encodedPrompt = encodeURIComponent(enhancedPrompt);
     return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1280&height=720&nologo=true&seed=${Math.random()}`;
 }
 
+const SlideContainer: React.FC<{ children: React.ReactNode, theme: any, slide: Slide }> = ({ children, theme, slide }) => {
+    const bgImage = slide.imagePrompt ? getAIImageUrl(slide.imagePrompt) : null;
+    return (
+        <div 
+            className={`h-full w-full relative overflow-hidden flex flex-col p-12 slide-inner-content ${theme.containerClass}`}
+            style={theme.bgStyle}
+        >
+            {/* Optional AI Background Layer with Blend Mode */}
+            {bgImage && (
+                <>
+                    <div 
+                        className="absolute inset-0 bg-cover bg-center transition-transform duration-[60s] ease-linear scale-110 opacity-30 mix-blend-overlay" 
+                        style={{ backgroundImage: `url(${bgImage})` }}
+                    ></div>
+                    {/* Gradient Fade for text readability */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                </>
+            )}
+            
+            {/* Content Layer */}
+            <div className="relative z-10 h-full flex flex-col">
+                {children}
+            </div>
+        </div>
+    )
+}
+
 export const TitleSlide: React.FC<SlideProps> = ({ slide, style }) => {
-  const theme = getThemeClasses(style);
-  const bgImage = slide.imagePrompt ? getAIImageUrl(slide.imagePrompt) : null;
-
+  const theme = getThemeVisuals(style);
   return (
-    <div className={`h-full w-full flex flex-col justify-center items-center text-center p-16 bg-gradient-to-br ${theme.gradient} relative overflow-hidden slide-inner-content`}>
-      {bgImage && (
-          <>
-            <div className="absolute inset-0 bg-cover bg-center transition-transform duration-[20s] ease-linear scale-110" style={{ backgroundImage: `url(${bgImage})` }}></div>
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"></div>
-          </>
-      )}
-
-      {/* Grid Overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:50px_50px] opacity-30 pointer-events-none"></div>
-
-      <div className={`relative z-10 max-w-5xl p-12 rounded-3xl border backdrop-blur-md ${theme.glass} shadow-2xl`}>
-        <h1 className={`text-7xl md:text-8xl font-black mb-6 uppercase tracking-tighter leading-none ${theme.text} drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] animate-fade-in-up`}>
-          {slide.title}
-        </h1>
-        {slide.subtitle && (
-          <div className={`text-2xl md:text-3xl font-light tracking-[0.2em] uppercase ${theme.accent} animate-fade-in-up stagger-2`}>
-            {slide.subtitle}
+    <SlideContainer theme={theme} slide={slide}>
+      <div className="h-full flex flex-col justify-center items-center text-center">
+          <div className={`p-12 rounded-3xl border ${theme.glass}`}>
+            <h1 className={`text-6xl md:text-8xl mb-6 uppercase tracking-tighter leading-none ${theme.text} animate-fade-in-up`}>
+            {slide.title}
+            </h1>
+            {slide.subtitle && (
+            <div className={`text-2xl md:text-3xl font-light tracking-[0.2em] uppercase ${theme.accent} animate-fade-in-up stagger-2`}>
+                {slide.subtitle}
+            </div>
+            )}
           </div>
-        )}
       </div>
-    </div>
+    </SlideContainer>
   );
 };
 
 export const ContentSlide: React.FC<SlideProps> = ({ slide, style }) => {
-  const theme = getThemeClasses(style);
-  const bgImage = slide.imagePrompt ? getAIImageUrl(slide.imagePrompt) : null;
-
+  const theme = getThemeVisuals(style);
   return (
-    <div className={`h-full w-full p-12 bg-gradient-to-r ${theme.gradient} flex flex-col relative overflow-hidden slide-inner-content`}>
-      {/* Background */}
-      {bgImage && (
-          <>
-            <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${bgImage})` }}></div>
-            <div className="absolute inset-0 bg-gradient-to-r from-black/95 via-black/80 to-transparent"></div>
-          </>
-      )}
-
-      <h2 className={`text-5xl font-bold mb-10 uppercase tracking-tight ${theme.text} z-10 drop-shadow-md`}>
+    <SlideContainer theme={theme} slide={slide}>
+      <h2 className={`text-5xl font-bold mb-10 uppercase tracking-tight ${theme.text} drop-shadow-md`}>
         {slide.title}
       </h2>
       
-      <div className="flex-1 grid grid-cols-5 gap-12 items-center z-10">
-        <div className={`col-span-3 p-8 rounded-2xl border ${theme.glass} backdrop-blur-md shadow-xl`}>
+      <div className="flex-1 grid grid-cols-12 gap-12 items-center">
+        <div className={`col-span-7 p-8 rounded-2xl border ${theme.glass} h-full`}>
             <ul className="space-y-6">
             {slide.bulletPoints?.map((point, i) => (
                 <li 
@@ -139,79 +173,84 @@ export const ContentSlide: React.FC<SlideProps> = ({ slide, style }) => {
                 style={{ animationDelay: `${i * 100}ms` }}
                 >
                 <span className={`mr-4 mt-2 w-2 h-2 shrink-0 rounded-full ${theme.accent.replace('text', 'bg')} shadow-[0_0_8px_currentColor]`}></span>
-                <span className="drop-shadow-sm">{point}</span>
+                <span>{point}</span>
                 </li>
             ))}
             </ul>
         </div>
         
         {/* Visual Sidebar */}
-        <div className={`col-span-2 h-full max-h-[500px] rounded-2xl border ${theme.border} bg-black/40 backdrop-blur-sm relative overflow-hidden group ${theme.glow}`}>
-             {bgImage && <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${bgImage})` }}></div>}
+        <div className={`col-span-5 h-full rounded-2xl border ${theme.border} bg-black/20 backdrop-blur-sm relative overflow-hidden group shadow-lg`}>
+             {slide.imagePrompt && (
+                <div 
+                    className="absolute inset-0 bg-cover bg-center" 
+                    style={{ backgroundImage: `url(${getAIImageUrl(slide.imagePrompt)})` }}
+                ></div>
+             )}
              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-6">
-                 <div className="text-white/60 text-sm font-mono uppercase tracking-widest border-t border-white/20 pt-2 w-full">
-                     AI Visualization
+                 <div className="text-white/60 text-xs font-mono uppercase tracking-widest border-t border-white/20 pt-2 w-full">
+                     Figure 1.1: Visualization
                  </div>
              </div>
         </div>
       </div>
-    </div>
+    </SlideContainer>
   );
 };
 
 export const ChartSlide: React.FC<SlideProps> = ({ slide, style }) => {
-  const theme = getThemeClasses(style);
+  const theme = getThemeVisuals(style);
   const data = slide.chartData;
   const maxVal = data?.datasets[0].data.reduce((a, b) => Math.max(a, b), 0) || 100;
   
   return (
-    <div className={`h-full w-full p-12 bg-gradient-to-b ${theme.gradient} flex flex-col slide-inner-content relative`}>
-      <h2 className={`text-5xl font-bold mb-8 uppercase tracking-widest ${theme.text} text-right z-10`}>
+    <SlideContainer theme={theme} slide={slide}>
+      <h2 className={`text-5xl font-bold mb-8 uppercase tracking-widest ${theme.text} text-right`}>
         {slide.title}
       </h2>
-      <div className={`flex-1 flex items-end justify-around gap-8 pb-12 px-12 relative z-10 rounded-3xl border ${theme.glass} p-8 backdrop-blur-md`}>
+      <div className={`flex-1 flex items-end justify-around gap-8 pb-12 px-12 rounded-3xl border ${theme.glass} p-8`}>
         {data?.labels.map((label, i) => {
           const val = data.datasets[0].data[i];
-          const heightPerc = Math.max((val / maxVal) * 80, 5); // min 5%
+          const heightPerc = Math.max((val / maxVal) * 80, 5); 
           return (
-            <div key={i} className="flex flex-col items-center gap-4 group w-full">
-              <div className="w-full relative h-[400px] flex items-end justify-center">
+            <div key={i} className="flex flex-col items-center gap-4 group w-full h-full justify-end">
+              <div className="w-full relative h-full flex items-end justify-center">
                  <div 
                     style={{ height: `${heightPerc}%`, animationDelay: `${i * 100 + 300}ms` }} 
-                    className={`w-16 rounded-t-lg ${theme.accent.replace('text', 'bg')} opacity-90 shadow-[0_0_20px_currentColor] relative animate-grow-up hover:opacity-100 transition-all`}
+                    className={`w-16 rounded-t-sm ${theme.chartColor} opacity-90 shadow-[0_0_20px_currentColor] relative animate-grow-up hover:opacity-100 transition-all`}
                  ></div>
-                 <span className="absolute bottom-[calc(100%+10px)] text-2xl font-bold text-white mb-2" style={{ bottom: `${heightPerc}%` }}>
+                 <span className={`absolute bottom-[calc(${heightPerc}%+10px)] text-2xl font-bold ${theme.accent}`}>
                     {val}
                  </span>
               </div>
-              <span className="text-lg text-slate-300 font-bold uppercase tracking-wider text-center border-t border-white/10 pt-4 w-full">{label}</span>
+              <span className={`text-lg ${theme.sub} font-bold uppercase tracking-wider text-center border-t border-white/10 pt-4 w-full`}>{label}</span>
             </div>
           )
         })}
       </div>
-    </div>
+    </SlideContainer>
   );
 };
 
 export const TableSlide: React.FC<SlideProps> = ({ slide, style }) => {
-  const theme = getThemeClasses(style);
+  const theme = getThemeVisuals(style);
   return (
-    <div className={`h-full w-full p-12 bg-gradient-to-bl ${theme.gradient} flex flex-col slide-inner-content`}>
+    <SlideContainer theme={theme} slide={slide}>
        <h2 className={`text-5xl font-bold mb-10 uppercase ${theme.text} animate-fade-in-up`}>
         {slide.title}
       </h2>
-      <div className={`flex-1 overflow-hidden rounded-2xl border ${theme.glass} shadow-2xl animate-fade-in-up stagger-2 p-2 backdrop-blur-md`}>
+      <div className={`flex-1 overflow-hidden rounded-2xl border ${theme.glass} shadow-2xl animate-fade-in-up stagger-2 p-2`}>
         <table className="w-full text-left border-collapse">
           <thead>
             <tr>
               {slide.tableData?.headers.map((h, i) => (
-                <th key={i} className={`p-6 text-xl font-bold uppercase tracking-wider border-b border-white/10 ${theme.accent} bg-black/40`}>
+                <th key={i} className={`p-6 text-xl font-bold uppercase tracking-wider border-b border-white/10 ${theme.accent} bg-black/10`}>
                   {h}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody className="text-xl text-slate-200">
+          <tbody className={`text-xl ${theme.sub}`}>
             {slide.tableData?.rows.map((row, i) => (
               <tr key={i} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                 {row.map((cell, j) => (
@@ -222,34 +261,34 @@ export const TableSlide: React.FC<SlideProps> = ({ slide, style }) => {
           </tbody>
         </table>
       </div>
-    </div>
+    </SlideContainer>
   )
 }
 
 export const ProcessSlide: React.FC<SlideProps> = ({ slide, style }) => {
-  const theme = getThemeClasses(style);
+  const theme = getThemeVisuals(style);
   return (
-    <div className={`h-full w-full p-12 bg-gradient-to-tr ${theme.gradient} flex flex-col slide-inner-content relative overflow-hidden`}>
-      <h2 className={`text-6xl font-bold mb-20 text-center uppercase tracking-[0.2em] ${theme.text} animate-fade-in-up relative z-10`}>
+    <SlideContainer theme={theme} slide={slide}>
+      <h2 className={`text-6xl font-bold mb-20 text-center uppercase tracking-[0.2em] ${theme.text} animate-fade-in-up`}>
         {slide.title}
       </h2>
-      <div className="flex-1 flex items-center justify-center relative px-8 gap-12 z-10">
-         {/* Line */}
-         <div className="absolute top-[60px] left-[10%] right-[10%] h-1 bg-white/10"></div>
+      <div className="flex-1 flex items-center justify-center relative px-8 gap-12">
+         {/* Connector Line */}
+         <div className="absolute top-[60px] left-[10%] right-[10%] h-1 bg-current opacity-20"></div>
 
          {slide.processSteps?.map((step, i) => (
            <div key={i} className="relative z-10 flex flex-col items-center text-center w-full max-w-[300px] group animate-fade-in-up" style={{ animationDelay: `${i * 200 + 300}ms` }}>
-             <div className={`w-28 h-28 shrink-0 rounded-full flex items-center justify-center text-4xl font-bold mb-8 ${theme.bg} border-4 ${theme.border} ${theme.accent} shadow-[0_0_30px_currentColor] group-hover:scale-110 transition-transform`}>
+             <div className={`w-28 h-28 shrink-0 rounded-full flex items-center justify-center text-4xl font-bold mb-8 border-4 shadow-lg ${theme.processCircle} group-hover:scale-110 transition-transform bg-black`}>
                {i + 1}
              </div>
-             <div className={`p-6 rounded-xl border ${theme.glass} backdrop-blur-md`}>
-                <h3 className="text-2xl font-bold text-white mb-2">{step.title}</h3>
-                <p className="text-lg text-slate-400">{step.description}</p>
+             <div className={`p-6 rounded-xl border ${theme.glass}`}>
+                <h3 className={`text-2xl font-bold mb-2 ${theme.text}`}>{step.title}</h3>
+                <p className={`text-lg ${theme.sub}`}>{step.description}</p>
              </div>
            </div>
          ))}
       </div>
-    </div>
+    </SlideContainer>
   )
 }
 

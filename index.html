@@ -205,46 +205,41 @@
       }
       @media print {
         body {
-          background: white !important;
-          color: black !important;
           -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
-          margin: 0;
-          padding: 0;
         }
-        #root {
-          height: auto !important;
-          width: 100% !important;
-          overflow: visible !important;
-        }
-        /* Hide UI elements */
-        .no-print, button, nav, .sidebar-hidden-print, aside {
-          display: none !important;
+        #root > * {
+           display: none !important;
         }
         .print-only {
           display: block !important;
-        }
-        /* Force Backgrounds */
-        * {
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-        }
-        /* Page Break Logic */
-        .slide-print-wrapper {
-          break-after: page;
-          page-break-after: always;
-          height: 100vh;
+          position: absolute;
+          top: 0;
+          left: 0;
           width: 100vw;
+          height: auto;
+          z-index: 9999;
+          background: white;
+        }
+        .slide-print-wrapper {
+          page-break-after: always;
+          break-after: page;
+          width: 100vw;
+          height: 100vh; /* Force landscape fill */
           overflow: hidden;
           position: relative;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
           background-color: #0f172a; /* Fallback */
         }
-        /* Reset layout for print */
+        /* Ensure styles inside slide apply */
         .slide-inner-content {
-          height: 100% !important;
-          width: 100% !important;
-          transform: none !important;
+           width: 100% !important;
+           height: 100% !important;
+           transform: none !important;
         }
+        /* Hide scrollbars and UI */
+        ::-webkit-scrollbar { display: none; }
       }
       
       .print-only {

@@ -1,10 +1,10 @@
 
 export enum PresentationStyle {
-  Cyberpunk = "Cyberpunk",
-  Corporate = "Corporate",
-  Minimalist = "Minimalist",
-  Futuristic = "Futuristic",
-  Nature = "Nature"
+  DarkDots = "Dark Dots",
+  NeonGrid = "Neon Grid",
+  SoftGradient = "Soft Gradient",
+  GeoPoly = "Geometric",
+  Minimalist = "Clean White"
 }
 
 export type TransitionStyle = 'fade' | 'zoom' | 'hologram' | 'shutter' | 'glitch' | 'cube';
