@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { PresentationStyle, SharedPresentation, Presentation } from '../types';
 import { communityService } from '../services/communityService';
+import { generatePresentation } from '../services/geminiService';
 import GlassCard from './ui/GlassCard';
 import Button from './ui/Button';
 import Label from './ui/Label';
@@ -11,6 +12,10 @@ import ImageIcon from './icons/ImageIcon';
 import UploadIcon from './icons/UploadIcon';
 import ShareIcon from './icons/ShareIcon';
 import XIcon from './icons/XIcon';
+import HomeIcon from './icons/HomeIcon';
+import CommunityIcon from './icons/CommunityIcon';
+import CreateIcon from './icons/CreateIcon';
+import DownloadIcon from './icons/DownloadIcon';
 import LoadingOverlay from './ui/LoadingOverlay';
 
 interface CreationStudioProps {
@@ -48,9 +53,15 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [userHistory, setUserHistory] = useState<Presentation[]>([]);
   const [uploading, setUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [internalLoading, setInternalLoading] = useState(false);
 
   useEffect(() => {
     refreshData();
+    
+    // Real-time updates from other tabs
+    const handleStorageChange = () => refreshData();
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const refreshData = () => {
@@ -75,31 +86,80 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
      }
   };
 
-  // Upload Logic (Simplified for brevity as no changes requested here specifically)
   const handleUploadFromDevice = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     if (file.type === "application/json") {
         setUploading(true);
         try {
             const text = await file.text();
             const json: Presentation = JSON.parse(text);
-            communityService.publishDeck(json, 'You (Device)');
+            communityService.publishDeck(json, 'You (Imported)');
             refreshData();
             setShowUploadModal(false);
-            alert("Uploaded successfully!");
-        } catch (err) { alert("Failed to upload."); } 
+            alert("Published to Community Successfully!");
+        } catch (err) { alert("Invalid JSON file."); } 
         finally { setUploading(false); }
     } else {
-        if (confirm(`Convert "${file.name}" to Lakshya Deck?`)) {
+        // Handle PDF/PPTX -> Convert -> Publish
+        if (confirm(`Convert and Publish "${file.name}" to Community?`)) {
             setShowUploadModal(false);
-            setFileName(file.name);
-            setFileContext(`Based on: ${file.name}`);
+            setInternalLoading(true);
             setLoadingType('convert');
-            onCreate(`Presentation based on ${file.name}`, style, `Based on ${file.name}`, 10);
+            try {
+                // Simulate context
+                const context = `Presentation based on uploaded file: ${file.name}`;
+                const pres = await generatePresentation({
+                    topic: `Analysis of ${file.name}`,
+                    style: PresentationStyle.NeonGrid,
+                    fileContext: context,
+                    slideCount: 8
+                });
+                communityService.publishDeck(pres, 'You (Converted)');
+                communityService.saveHistory(pres);
+                refreshData();
+                alert("File converted and published to Community Hub!");
+            } catch (err) {
+                alert("Conversion failed.");
+            } finally {
+                setInternalLoading(false);
+            }
         }
     }
     if(e.target) e.target.value = ''; 
+  };
+
+  const handlePublishFromHistory = (p: Presentation) => {
+      if(confirm(`Publish "${p.title}" to Public Community?`)) {
+          communityService.publishDeck(p, 'You');
+          refreshData();
+          setShowUploadModal(false);
+          setActiveTab('COMMUNITY');
+      }
+  };
+
+  const handleDeleteHistory = (e: React.MouseEvent, title: string) => {
+      e.stopPropagation();
+      if(confirm("Delete this deck from your history?")) {
+          communityService.deleteHistory(title);
+          refreshData();
+      }
+  };
+
+  const handleDeleteCommunity = (e: React.MouseEvent, id: string) => {
+      e.stopPropagation();
+      if(confirm("Delete this post from community?")) {
+          communityService.deleteDeck(id);
+          refreshData();
+      }
+  };
+
+  const handleDownloadDeck = (e: React.MouseEvent, deck: SharedPresentation) => {
+      e.stopPropagation();
+      communityService.incrementDownload(deck.id);
+      communityService.downloadDeck(deck);
+      refreshData();
   };
 
   const ThemeSelector = () => (
@@ -151,6 +211,28 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                             Convert Now
                          </Button>
                     </GlassCard>
+
+                    {/* HISTORY SECTION */}
+                    <div className="mt-12">
+                         <h2 className="text-2xl font-bold text-white mb-6">My Creations</h2>
+                         {userHistory.length === 0 ? (
+                             <div className="text-slate-500 text-center py-8 bg-slate-900/30 rounded-xl border border-dashed border-slate-800">No history yet.</div>
+                         ) : (
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                 {userHistory.map(h => (
+                                     <div key={h.title + Math.random()} onClick={() => onOpenHistory(h)} className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-sky-500/50 cursor-pointer group flex justify-between items-center transition-all">
+                                         <div>
+                                            <h4 className="font-bold text-slate-200 group-hover:text-sky-400 transition-colors">{h.title}</h4>
+                                            <p className="text-xs text-slate-500">{h.slides.length} Slides • {h.style}</p>
+                                         </div>
+                                         <div className="flex gap-2">
+                                             <button onClick={(e) => handleDeleteHistory(e, h.title)} className="p-2 hover:bg-red-500/20 text-slate-600 hover:text-red-400 rounded-lg transition-colors"><XIcon className="w-4 h-4"/></button>
+                                         </div>
+                                     </div>
+                                 ))}
+                             </div>
+                         )}
+                    </div>
                 </div>
             );
 
@@ -186,23 +268,30 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                 <div className="w-full max-w-5xl animate-fade-in-up">
                     <div className="flex justify-between items-center mb-8">
                         <h1 className="text-3xl font-bold text-white">Community Hub</h1>
-                        <button onClick={() => setShowUploadModal(true)} className="bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2"><UploadIcon className="w-4 h-4"/> Upload</button>
+                        <button onClick={() => setShowUploadModal(true)} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20"><UploadIcon className="w-4 h-4"/> Publish Deck</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {communityDecks.map((deck) => (
                             <GlassCard key={deck.id} className="p-0 overflow-hidden group hover:border-sky-500/50 relative">
-                                <div className={`h-32 w-full ${deck.style === PresentationStyle.Minimalist ? 'bg-slate-200' : 'bg-slate-800'}`}>
+                                <div className={`h-36 w-full ${deck.style === PresentationStyle.Minimalist ? 'bg-slate-200' : 'bg-slate-800'} relative`}>
                                     <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                                         {/* Mini Preview of theme */}
                                          <div className={`w-full h-full ${deck.style === PresentationStyle.DarkDots ? 'bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:10px_10px]' : ''}`}></div>
                                     </div>
-                                    <div className="absolute bottom-3 left-4 right-4">
-                                        <h3 className={`font-bold truncate ${deck.style === PresentationStyle.Minimalist ? 'text-slate-900' : 'text-white'}`}>{deck.title}</h3>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
+                                    <div className="absolute bottom-3 left-4 right-4 z-10">
+                                        <h3 className={`font-bold truncate text-white text-lg`}>{deck.title}</h3>
+                                        <p className="text-xs text-slate-300">by {deck.sharedBy}</p>
                                     </div>
+                                    <button onClick={(e) => handleDeleteCommunity(e, deck.id)} className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity z-20"><XIcon className="w-3 h-3"/></button>
                                 </div>
-                                <div className="p-4 bg-slate-900/80 flex gap-2">
-                                     <button className="flex-1 py-2 rounded bg-white/5 text-xs font-bold text-slate-300">♥ {deck.likes}</button>
-                                     <button className="flex-1 py-2 rounded bg-sky-600/20 text-xs font-bold text-sky-400">Save</button>
+                                <div className="p-4 bg-slate-900/90 flex gap-2">
+                                     <div className="flex-1 py-2 rounded bg-white/5 flex items-center justify-center gap-1 text-xs font-bold text-slate-300">
+                                        <span className="text-pink-500">♥</span> {deck.likes}
+                                     </div>
+                                     <button onClick={() => onOpenHistory(deck)} className="flex-1 py-2 rounded bg-sky-600/20 hover:bg-sky-600/30 text-xs font-bold text-sky-400 transition-colors">View</button>
+                                     <button onClick={(e) => handleDownloadDeck(e, deck)} className="py-2 px-3 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 transition-colors" title="Download JSON">
+                                        <DownloadIcon className="w-4 h-4" />
+                                     </button>
                                 </div>
                             </GlassCard>
                         ))}
@@ -210,17 +299,38 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                      {/* UPLOAD MODAL */}
                      {showUploadModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                            <GlassCard className="max-w-md w-full p-6 border-sky-500/30">
+                            <GlassCard className="max-w-md w-full p-6 border-sky-500/30 relative">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-xl font-bold text-white">Upload</h3>
+                                    <h3 className="text-xl font-bold text-white">Publish to Community</h3>
                                     <button onClick={() => setShowUploadModal(false)}><XIcon className="w-6 h-6"/></button>
                                 </div>
-                                <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-4">
-                                    <label className="cursor-pointer flex items-center gap-4 w-full">
-                                        <UploadIcon className="w-8 h-8 text-sky-400"/>
-                                        <div><h4 className="text-white font-bold">From Device</h4><p className="text-xs text-slate-400">PDF, PPTX, JSON</p></div>
-                                        <input type="file" className="hidden" accept=".json,.pdf,.pptx" onChange={handleUploadFromDevice} disabled={uploading} />
-                                    </label>
+                                
+                                <div className="space-y-4">
+                                    {/* Option 1: Upload File */}
+                                    <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-sky-500 transition-colors">
+                                        <label className="cursor-pointer flex items-center gap-4 w-full">
+                                            <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400"><UploadIcon className="w-5 h-5"/></div>
+                                            <div><h4 className="text-white font-bold">Upload File</h4><p className="text-xs text-slate-400">PDF, PPTX (Auto-Convert)</p></div>
+                                            <input type="file" className="hidden" accept=".json,.pdf,.pptx" onChange={handleUploadFromDevice} disabled={uploading || internalLoading} />
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center gap-4 py-2">
+                                        <div className="h-px bg-white/10 flex-1"></div>
+                                        <span className="text-xs text-slate-500 font-bold">OR SELECT FROM HISTORY</span>
+                                        <div className="h-px bg-white/10 flex-1"></div>
+                                    </div>
+
+                                    {/* Option 2: Select from History */}
+                                    <div className="max-h-48 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                        {userHistory.map(h => (
+                                            <button key={h.title + Math.random()} onClick={() => handlePublishFromHistory(h)} className="w-full text-left p-3 rounded-lg bg-black/20 hover:bg-sky-500/20 border border-white/5 hover:border-sky-500/50 flex justify-between items-center group">
+                                                <span className="text-sm font-bold text-slate-300 group-hover:text-white truncate max-w-[180px]">{h.title}</span>
+                                                <span className="text-[10px] text-slate-500">Publish</span>
+                                            </button>
+                                        ))}
+                                        {userHistory.length === 0 && <p className="text-center text-xs text-slate-500 py-2">No decks in history.</p>}
+                                    </div>
                                 </div>
                             </GlassCard>
                         </div>
@@ -232,7 +342,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-200 flex flex-col lg:flex-row overflow-hidden font-sans">
-      {isLoading && (
+      {(isLoading || internalLoading) && (
           <div className="fixed inset-0 z-[100]">
             <LoadingOverlay type={loadingType} />
             <div className="absolute bottom-10 left-0 right-0 flex justify-center z-[101]">
@@ -244,17 +354,20 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       {/* Sidebar (Desktop) */}
       <aside className="hidden lg:flex w-64 h-full border-r border-white/5 bg-slate-900/50 backdrop-blur-xl flex-col py-8 z-10 shrink-0">
          <div className="px-6 mb-12 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center"><span className="text-white font-black text-xl">L</span></div>
-            <span className="font-black text-lg text-white">Lakshya Studio</span>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shrink-0"><span className="text-white font-black text-xl">L</span></div>
+            <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
          </div>
-         <nav className="flex-col px-4 space-y-2 flex">
+         <nav className="flex-col px-4 space-y-2 flex flex-1">
             <button onClick={() => setActiveTab('HOME')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'HOME' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+                <HomeIcon className="w-5 h-5"/>
                 <span className="font-bold">Home</span>
             </button>
             <button onClick={() => setActiveTab('CREATE')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CREATE' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+                <CreateIcon className="w-5 h-5"/>
                 <span className="font-bold">Create</span>
             </button>
             <button onClick={() => setActiveTab('COMMUNITY')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'COMMUNITY' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+                <CommunityIcon className="w-5 h-5"/>
                 <span className="font-bold">Community</span>
             </button>
          </nav>
@@ -264,17 +377,29 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       <main className="flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-24 lg:pb-12">
          {/* Mobile Header */}
          <div className="lg:hidden w-full flex justify-between mb-6">
-             <span className="font-black text-lg text-white">Lakshya Studio</span>
+             <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
              <span className="text-xs font-bold text-sky-500">BETA</span>
          </div>
          {renderContent()}
       </main>
 
       {/* Mobile Nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 border-t border-white/10 flex justify-around items-center z-50">
-         <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center ${activeTab === 'HOME' ? 'text-sky-400' : 'text-slate-500'}`}><span className="text-xs font-bold">Home</span></button>
-         <button onClick={() => setActiveTab('CREATE')} className="w-12 h-12 bg-sky-600 rounded-full flex items-center justify-center -mt-6 shadow-lg text-white text-2xl pb-1">+</button>
-         <button onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center ${activeTab === 'COMMUNITY' ? 'text-sky-400' : 'text-slate-500'}`}><span className="text-xs font-bold">Community</span></button>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 border-t border-white/10 grid grid-cols-3 items-center z-50 pb-safe">
+         <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 ${activeTab === 'HOME' ? 'text-sky-400' : 'text-slate-500'}`}>
+            <HomeIcon className="w-6 h-6"/>
+            <span className="text-[10px] font-bold">Home</span>
+         </button>
+         
+         <div className="flex justify-center relative -top-5">
+            <button onClick={() => setActiveTab('CREATE')} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${activeTab === 'CREATE' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
+                <CreateIcon className="w-6 h-6"/>
+            </button>
+         </div>
+
+         <button onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center gap-1 ${activeTab === 'COMMUNITY' ? 'text-sky-400' : 'text-slate-500'}`}>
+            <CommunityIcon className="w-6 h-6"/>
+            <span className="text-[10px] font-bold">Community</span>
+         </button>
       </div>
     </div>
   );

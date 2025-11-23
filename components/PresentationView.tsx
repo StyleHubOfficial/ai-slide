@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Presentation, PresentationStyle, TransitionStyle } from '../types';
 import { SlideRenderer, getAIImageUrl } from './SlideRenderers';
@@ -53,15 +52,9 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
   const [activeStyle, setActiveStyle] = useState<PresentationStyle>(presentation.style);
   const [transition, setTransition] = useState<TransitionStyle>('glitch');
   const [isExportingPPT, setIsExportingPPT] = useState(false);
-  const [elapsedTime, setElapsedTime] = useState(0);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-
-  useEffect(() => {
-    const interval = setInterval(() => setElapsedTime(p => p + 1), 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   const nextSlide = () => { if (currentSlideIndex < presentation.slides.length - 1) setCurrentSlideIndex(prev => prev + 1); };
   const prevSlide = () => { if (currentSlideIndex > 0) setCurrentSlideIndex(prev => prev - 1); };
@@ -86,7 +79,13 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
         }
   };
   
-  const handleDownloadPDF = () => { setShowDownloadMenu(false); setTimeout(() => window.print(), 300); };
+  const handleDownloadPDF = () => { 
+      setShowDownloadMenu(false); 
+      // Small delay to allow menu to close and state to settle before print dialog freezes UI
+      setTimeout(() => {
+          window.print();
+      }, 500); 
+  };
 
   const handleExportPPT = async () => {
     if (isExportingPPT) return;
@@ -121,11 +120,12 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
   return (
     <div className="fixed inset-0 z-50 bg-black text-white flex flex-col h-full w-full overflow-hidden select-none">
       
-      {/* Hidden Print Container */}
+      {/* Hidden Print Container - Rendered but hidden until print */}
       <div className="print-only">
          {presentation.slides.map(slide => (
             <div key={slide.id} className="slide-print-wrapper">
-               <div style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+               {/* Force rendering of SlideRenderer in a container that fills the print page */}
+               <div style={{ width: '100%', height: '100%', overflow: 'hidden', position: 'relative' }}>
                  <SlideRenderer slide={slide} style={activeStyle} />
                </div>
             </div>
@@ -133,18 +133,18 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       </div>
 
       {/* --- DESKTOP TOOLBAR --- */}
-      <div className="no-print hidden md:flex h-16 bg-slate-900/90 border-b border-white/10 items-center justify-between px-6 shrink-0 z-50">
+      <div className="no-print hidden md:flex h-16 bg-slate-900/90 border-b border-white/10 items-center justify-between px-6 shrink-0 z-50 backdrop-blur-md">
           <div className="flex items-center gap-6">
-             <button onClick={onClose} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-bold"><XIcon className="w-4 h-4" /> EXIT</button>
-             <h2 className="font-bold text-slate-200 truncate max-w-[200px]">{presentation.title}</h2>
+             <button onClick={onClose} className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-bold transition-colors"><XIcon className="w-4 h-4" /> EXIT</button>
+             <h2 className="font-bold text-slate-200 truncate max-w-[300px]">{presentation.title}</h2>
           </div>
           <div className="flex items-center gap-3">
              <div className="flex bg-black/40 rounded-lg p-1 border border-white/10">
-                <button onClick={() => setViewMode('SLIDE')} className={`px-3 py-1 rounded text-xs font-bold ${viewMode === 'SLIDE' ? 'bg-sky-600' : 'text-slate-400'}`}>Slide</button>
-                <button onClick={() => setViewMode('GRID')} className={`px-3 py-1 rounded text-xs font-bold ${viewMode === 'GRID' ? 'bg-sky-600' : 'text-slate-400'}`}>Grid</button>
-                <button onClick={() => setViewMode('PRESENTER')} className={`px-3 py-1 rounded text-xs font-bold ${viewMode === 'PRESENTER' ? 'bg-sky-600' : 'text-slate-400'}`}><PresenterIcon className="w-3 h-3 inline mr-1"/>Presenter</button>
+                <button onClick={() => setViewMode('SLIDE')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${viewMode === 'SLIDE' ? 'bg-sky-600 shadow-lg' : 'text-slate-400 hover:text-white'}`}>Slide</button>
+                <button onClick={() => setViewMode('GRID')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${viewMode === 'GRID' ? 'bg-sky-600 shadow-lg' : 'text-slate-400 hover:text-white'}`}>Grid</button>
+                <button onClick={() => setViewMode('PRESENTER')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${viewMode === 'PRESENTER' ? 'bg-sky-600 shadow-lg' : 'text-slate-400 hover:text-white'}`}><PresenterIcon className="w-3 h-3 inline mr-1"/>Presenter</button>
              </div>
-             <button onClick={() => setIsLaserMode(!isLaserMode)} className={`p-2 rounded-lg ${isLaserMode ? 'bg-red-500/20 text-red-400' : 'text-slate-400'}`} title="Laser Pointer"><div className="w-3 h-3 rounded-full bg-current shadow-sm"></div></button>
+             <button onClick={() => setIsLaserMode(!isLaserMode)} className={`p-2 rounded-lg transition-colors ${isLaserMode ? 'bg-red-500/20 text-red-400' : 'text-slate-400 hover:text-white'}`} title="Laser Pointer"><div className="w-3 h-3 rounded-full bg-current shadow-sm"></div></button>
              
              {/* THEME PICKER */}
              <div className="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/10">
@@ -159,14 +159,17 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
                  ))}
              </div>
 
-             <button onClick={handleShareToCommunity} className="p-2 text-pink-400 hover:bg-pink-500/20 rounded"><ShareIcon className="w-4 h-4" /></button>
+             <button onClick={handleShareToCommunity} className="p-2 text-pink-400 hover:bg-pink-500/20 rounded transition-colors" title="Share to Community"><ShareIcon className="w-4 h-4" /></button>
              
              <div className="relative">
-                <Button onClick={() => setShowDownloadMenu(!showDownloadMenu)} className="h-8 px-3 text-xs bg-sky-600">Download</Button>
+                <Button onClick={() => setShowDownloadMenu(!showDownloadMenu)} className="h-8 px-4 text-xs bg-sky-600 hover:bg-sky-500 shadow-lg shadow-sky-500/20">Download</Button>
                 {showDownloadMenu && (
-                    <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50">
-                        <button onClick={handleDownloadPDF} className="w-full px-4 py-3 text-left text-sm hover:bg-white/5 text-slate-300">PDF</button>
-                        <button onClick={handleExportPPT} className="w-full px-4 py-3 text-left text-sm hover:bg-white/5 text-slate-300">PPTX {isExportingPPT && '...'}</button>
+                    <div className="absolute top-full right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 animate-fade-in-up">
+                        <button onClick={handleDownloadPDF} className="w-full px-4 py-3 text-left text-sm hover:bg-white/5 text-slate-300 transition-colors">Download PDF</button>
+                        <button onClick={handleExportPPT} className="w-full px-4 py-3 text-left text-sm hover:bg-white/5 text-slate-300 transition-colors flex justify-between items-center">
+                            Download PPTX
+                            {isExportingPPT && <Spinner className="w-3 h-3" />}
+                        </button>
                     </div>
                 )}
              </div>

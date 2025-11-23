@@ -1,4 +1,3 @@
-
 import { SharedPresentation, Presentation, PresentationStyle } from '../types';
 
 const STORAGE_KEY = 'lumina_community_decks';
@@ -102,6 +101,16 @@ export const communityService = {
     });
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
     return updated;
+  },
+
+  downloadDeck: (deck: SharedPresentation) => {
+      const element = document.createElement("a");
+      const file = new Blob([JSON.stringify(deck, null, 2)], {type: 'application/json'});
+      element.href = URL.createObjectURL(file);
+      element.download = `${deck.title.replace(/\s+/g, '_')}_Lakshya.json`;
+      document.body.appendChild(element); // Required for this to work in FireFox
+      element.click();
+      document.body.removeChild(element);
   },
 
   // --- User History Methods (Private) ---
