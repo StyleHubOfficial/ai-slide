@@ -109,73 +109,79 @@ const ChatInterface: React.FC = () => {
     };
 
     return (
-        <div className="w-full h-full flex flex-col animate-fade-in-up pb-6">
-            <header className="mb-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="w-full h-full flex flex-col bg-slate-950">
+            {/* App Bar / Header */}
+            <header className="shrink-0 flex items-center justify-between p-4 bg-slate-900/90 backdrop-blur-md border-b border-white/5 z-30 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-sky-500/20 rounded-lg text-sky-400">
-                        <RobotIcon className="w-6 h-6" />
-                    </div>
+                    <Avatar role="model" />
                     <div>
-                        <h1 className="text-2xl font-bold text-white">AI Assistant</h1>
-                        <p className="text-xs text-slate-400">Powered by Gemini 2.5 & 3.0</p>
+                        <h1 className="text-base md:text-lg font-bold text-white leading-tight">Lakshya Assistant</h1>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="text-xs text-slate-400">Online</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Model Selector */}
-                <div className="bg-slate-900/50 p-1 rounded-lg border border-white/10 flex gap-1 overflow-x-auto">
+                {/* Model Selector - Compact */}
+                <div className="bg-slate-800 p-0.5 rounded-lg border border-white/10 flex gap-0.5 overflow-hidden">
                     {MODELS.map((m) => (
                         <button
                             key={m.id}
                             onClick={() => setSelectedModel(m.id)}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold transition-all whitespace-nowrap ${
+                            className={`p-2 rounded md:px-3 md:py-1.5 flex items-center gap-2 transition-all ${
                                 selectedModel === m.id 
-                                ? 'bg-sky-600 text-white shadow-lg' 
+                                ? 'bg-sky-600 text-white shadow-sm' 
                                 : 'text-slate-400 hover:text-white hover:bg-white/5'
                             }`}
                             title={m.desc}
                         >
                             {m.icon}
-                            <div className="flex flex-col items-start leading-none">
-                                <span>{m.label}</span>
-                                <span className="text-[9px] opacity-70 font-normal">{m.desc}</span>
-                            </div>
+                            <span className="hidden md:inline text-xs font-bold">{m.label}</span>
                         </button>
                     ))}
                 </div>
             </header>
 
-            <GlassCard className="flex-1 flex flex-col p-0 overflow-hidden bg-slate-950 border-slate-700/50 relative">
-                
-                {/* Tech Pattern Background (WhatsApp style but techy) */}
+            {/* Main Chat Area */}
+            <div className="flex-1 relative flex flex-col overflow-hidden bg-slate-950">
+                {/* Tech Pattern Background */}
                 <div 
-                    className="absolute inset-0 opacity-[0.4] pointer-events-none"
+                    className="absolute inset-0 opacity-[0.3] pointer-events-none"
                     style={{
                         backgroundImage: `url("${TECH_BG_PATTERN}")`,
-                        backgroundSize: '80px 80px',
+                        backgroundSize: '120px 120px',
                         backgroundRepeat: 'repeat'
                     }}
                 ></div>
 
-                {/* Messages Area */}
+                {/* Messages List */}
                 <div 
                     ref={scrollRef} 
-                    className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 custom-scrollbar scroll-smooth relative z-10"
+                    className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth relative z-10 pb-20"
                 >
+                    {/* Welcome Spacer */}
+                    <div className="h-4"></div>
+
                     {messages.map((msg) => (
                         <div 
                             key={msg.id} 
-                            className={`flex w-full gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+                            className={`flex w-full gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
                         >
-                            <Avatar role={msg.role} />
+                            {/* Avatar only for Model to save space/Telegram style usually doesn't show own avatar, but we keep consistent UX */}
+                            {msg.role === 'model' && <Avatar role="model" className="mt-auto mb-1" />}
                             
-                            <div className={`max-w-[75%] md:max-w-[70%] p-4 rounded-2xl text-sm md:text-base leading-relaxed whitespace-pre-wrap shadow-lg transition-all duration-300 hover:scale-[1.01] ${
-                                msg.role === 'user' 
-                                    ? 'bg-gradient-to-br from-sky-600 to-sky-700 text-white rounded-tr-none shadow-sky-900/20' 
-                                    : 'bg-slate-800/90 backdrop-blur-sm text-slate-200 rounded-tl-none border border-slate-700/50 shadow-black/20'
-                            }`}>
-                                {msg.text}
-                                <div className={`text-[9px] mt-2 text-right opacity-50 ${msg.role === 'user' ? 'text-sky-100' : 'text-slate-500'}`}>
-                                    {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className={`max-w-[85%] md:max-w-[70%] min-w-[60px] relative group`}>
+                                <div className={`p-3 md:p-4 rounded-2xl text-sm md:text-base leading-relaxed whitespace-pre-wrap shadow-sm ${
+                                    msg.role === 'user' 
+                                        ? 'bg-sky-600 text-white rounded-br-none shadow-sky-900/10' 
+                                        : 'bg-slate-800 text-slate-200 rounded-bl-none shadow-black/30'
+                                }`}>
+                                    {msg.text}
+                                </div>
+                                <div className={`text-[10px] mt-1 opacity-60 flex gap-1 ${msg.role === 'user' ? 'justify-end text-sky-200' : 'justify-start text-slate-500 ml-1'}`}>
+                                   <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                   {msg.role === 'user' && <span>✓✓</span>}
                                 </div>
                             </div>
                         </div>
@@ -183,71 +189,63 @@ const ChatInterface: React.FC = () => {
                     
                     {/* Animated Typing Indicator */}
                     {isTyping && (
-                        <div className="flex w-full gap-4 animate-fade-in-up">
-                            <Avatar role="model" />
-                            <div className="bg-slate-800/80 backdrop-blur-sm text-slate-400 p-4 rounded-2xl rounded-tl-none border border-slate-700/50 flex items-center gap-3 shadow-[0_0_15px_rgba(56,189,248,0.1)] relative overflow-hidden group">
-                                {/* Glow Effect */}
-                                <div className="absolute inset-0 bg-sky-500/5 animate-pulse"></div>
-                                
-                                <div className="flex gap-1.5 h-3 items-center relative z-10">
-                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce shadow-[0_0_8px_currentColor]"></span>
-                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce delay-100 shadow-[0_0_8px_currentColor]"></span>
-                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce delay-200 shadow-[0_0_8px_currentColor]"></span>
+                        <div className="flex w-full gap-3 animate-fade-in-up">
+                            <Avatar role="model" className="mt-auto mb-1" />
+                            <div className="bg-slate-800 text-slate-400 px-4 py-3 rounded-2xl rounded-bl-none flex items-center gap-2 shadow-sm">
+                                <div className="flex gap-1 h-2 items-center">
+                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
+                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></span>
+                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></span>
                                 </div>
-                                <span className="text-xs text-sky-400/90 font-medium animate-pulse relative z-10">Generating Response...</span>
                             </div>
                         </div>
                     )}
                 </div>
+            </div>
 
-                {/* Input Area */}
-                <div className="p-4 bg-slate-900/90 border-t border-white/5 backdrop-blur-xl relative z-20">
-                    <div className="relative flex gap-2">
+            {/* Input Area - Fixed Bottom for Full Screen Feel */}
+            <div className="shrink-0 p-3 md:p-4 bg-slate-900 border-t border-white/5 relative z-20 pb-safe">
+                <div className="max-w-4xl mx-auto flex gap-2 items-end">
+                     <div className="flex-1 bg-black/40 border border-slate-700 focus-within:border-sky-500 rounded-2xl flex items-center min-h-[50px] transition-colors focus-within:bg-black/60">
                         <Textarea 
                             value={input}
                             onChange={e => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder={`Ask ${MODELS.find(m => m.id === selectedModel)?.label} anything...`}
-                            className="min-h-[60px] max-h-[120px] bg-black/40 border-slate-700 focus:border-sky-500 rounded-xl pr-16 resize-none transition-all focus:bg-black/60 focus:shadow-[0_0_20px_rgba(14,165,233,0.1)]"
+                            placeholder="Message..."
+                            className="bg-transparent border-none shadow-none focus:ring-0 resize-none min-h-[50px] max-h-[120px] py-3 px-4 text-sm md:text-base leading-relaxed"
                         />
-                        <Button 
-                            onClick={handleSend} 
-                            disabled={!input.trim() || isTyping || isSending}
-                            className={`absolute right-2 bottom-2 w-12 h-12 p-0 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-900/50 transition-all duration-300 overflow-visible ${isSending ? 'bg-emerald-600 scale-90' : 'scale-100'}`}
-                        >
-                            {/* Neon Particles on Send */}
-                            {isSending && particles.map((p, i) => {
-                                const tx = Math.cos(p.angle * Math.PI / 180) * p.dist;
-                                const ty = Math.sin(p.angle * Math.PI / 180) * p.dist;
-                                return (
-                                    <div 
-                                        key={i}
-                                        className="absolute left-1/2 top-1/2 bg-cyan-300 rounded-full animate-particle-out pointer-events-none"
-                                        style={{
-                                            width: p.size,
-                                            height: p.size,
-                                            '--tx': `${tx}px`,
-                                            '--ty': `${ty}px`,
-                                            boxShadow: '0 0 6px rgba(103,232,249,0.8)'
-                                        } as React.CSSProperties}
-                                    />
-                                );
-                            })}
-
-                            {/* Animated Icon Container */}
-                            <div className={`transition-all duration-500 transform ease-in-out ${isSending ? 'translate-x-12 -translate-y-12 opacity-0 rotate-45 scale-75' : 'translate-x-0 opacity-100'}`}>
-                                <svg className="w-6 h-6 text-white transform rotate-90 ml-0.5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                </svg>
-                            </div>
-                        </Button>
-                    </div>
-                    <div className="text-center mt-2 flex items-center justify-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-                        <p className="text-[10px] text-slate-500">Secure connection to {MODELS.find(m => m.id === selectedModel)?.label}</p>
-                    </div>
+                     </div>
+                     <Button 
+                        onClick={handleSend} 
+                        disabled={!input.trim() || isTyping || isSending}
+                        className={`w-12 h-12 p-0 rounded-full shrink-0 bg-sky-500 hover:bg-sky-400 flex items-center justify-center shadow-lg transition-all duration-300 overflow-hidden ${isSending ? 'scale-90 bg-emerald-500' : 'scale-100'}`}
+                    >
+                         {/* Neon Particles on Send */}
+                        {isSending && particles.map((p, i) => {
+                            const tx = Math.cos(p.angle * Math.PI / 180) * p.dist;
+                            const ty = Math.sin(p.angle * Math.PI / 180) * p.dist;
+                            return (
+                                <div 
+                                    key={i}
+                                    className="absolute left-1/2 top-1/2 bg-white rounded-full animate-particle-out pointer-events-none"
+                                    style={{
+                                        width: p.size,
+                                        height: p.size,
+                                        '--tx': `${tx}px`,
+                                        '--ty': `${ty}px`
+                                    } as React.CSSProperties}
+                                />
+                            );
+                        })}
+                        
+                        <div className={`transition-all duration-300 transform ${isSending ? 'translate-x-8 -translate-y-8 opacity-0' : 'translate-0 opacity-100'}`}>
+                            <svg className="w-5 h-5 text-white transform rotate-0 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 12h14M12 5l7 7-7 7" />
+                            </svg>
+                        </div>
+                    </Button>
                 </div>
-            </GlassCard>
+            </div>
         </div>
     );
 };

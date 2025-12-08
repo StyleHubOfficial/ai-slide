@@ -383,12 +383,14 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-24 lg:pb-12">
-         {/* Mobile Header */}
-         <div className="lg:hidden w-full flex justify-between mb-6">
-             <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
-             <span className="text-xs font-bold text-sky-500">BETA</span>
-         </div>
+      <main className={`${activeTab === 'CHAT' ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-24 lg:pb-12'}`}>
+         {/* Mobile Header - Hide only for Chat to give full screen feel */}
+         {activeTab !== 'CHAT' && (
+             <div className="lg:hidden w-full flex justify-between mb-6">
+                 <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
+                 <span className="text-xs font-bold text-sky-500">BETA</span>
+             </div>
+         )}
          {renderContent()}
       </main>
 
