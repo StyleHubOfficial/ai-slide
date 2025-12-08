@@ -20,30 +20,52 @@ const getApiKey = () => {
   return apiKey;
 };
 
-export async function sendChatMessage(history: ChatMessage[], newMessage: string, modelId: AiModelId = 'gemini-2.5-flash'): Promise<string> {
+export async function sendChatMessage(history: ChatMessage[], newMessage: string, modelId: AiModelId = 'gemini-2.5-flash'): Promise<{ text: string, images?: string[] }> {
     try {
         const apiKey = getApiKey();
         const ai = new GoogleGenAI({ apiKey });
         
-        // Convert internal history to Gemini format
-        const chatHistory = history.map(msg => ({
-            role: msg.role,
-            parts: [{ text: msg.text }]
-        }));
+        if (modelId === 'gemini-2.5-flash-image') {
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash-image',
+                contents: { parts: [{ text: newMessage }] },
+            });
 
-        const chat = ai.chats.create({
-            model: modelId,
-            history: chatHistory,
-            config: {
-                systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative presentation assistant. You help users brainstorm topics, outline slides, and answer technical questions about presentations. Keep answers concise, professional, and ALWAYS use relevant emojis to make the conversation friendly and engaging! 🤖✨🚀",
+            let text = '';
+            const images: string[] = [];
+
+            if (response.candidates?.[0]?.content?.parts) {
+                for (const part of response.candidates[0].content.parts) {
+                    if (part.text) text += part.text;
+                    if (part.inlineData) {
+                        images.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
+                    }
+                }
             }
-        });
+            return { text: text || (images.length > 0 ? "Generated Image:" : "I couldn't generate an image."), images };
+        } else {
+            // Convert internal history to Gemini format, filtering out image messages for text models
+            const chatHistory = history
+                .filter(msg => !msg.images || msg.images.length === 0)
+                .map(msg => ({
+                    role: msg.role,
+                    parts: [{ text: msg.text }]
+                }));
 
-        const result = await chat.sendMessage({ message: newMessage });
-        return result.text || "I'm having trouble thinking right now. 🤯";
+            const chat = ai.chats.create({
+                model: modelId,
+                history: chatHistory,
+                config: {
+                    systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative presentation assistant. You help users brainstorm topics, outline slides, and answer technical questions about presentations. Keep answers concise, professional, and ALWAYS use relevant emojis to make the conversation friendly and engaging! 🤖✨🚀",
+                }
+            });
+
+            const result = await chat.sendMessage({ message: newMessage });
+            return { text: result.text || "I'm having trouble thinking right now. 🤯" };
+        }
     } catch (error: any) {
         console.error("Chat Error:", error);
-        return "Sorry, I encountered an error connecting to the AI. ⚠️";
+        return { text: "Sorry, I encountered an error connecting to the AI. ⚠️" };
     }
 }
 

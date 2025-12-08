@@ -11,7 +11,7 @@ export type TransitionStyle = 'fade' | 'zoom' | 'hologram' | 'shutter' | 'glitch
 
 export type SlideType = 'title' | 'content' | 'chart' | 'table' | 'process';
 
-export type AiModelId = 'gemini-2.5-flash' | 'gemini-flash-lite-latest' | 'gemini-3-pro-preview';
+export type AiModelId = 'gemini-2.5-flash' | 'gemini-flash-lite-latest' | 'gemini-3-pro-preview' | 'gemini-2.5-flash-image';
 
 export interface ChartData {
   labels: string[];
@@ -76,5 +76,6 @@ export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
   text: string;
+  images?: string[];
   timestamp: number;
 }

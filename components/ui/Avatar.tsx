@@ -13,6 +13,7 @@ const Avatar: React.FC<AvatarProps> = ({ role, className = '', onClick }) => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const handleClick = () => {
+    // Always trigger animation on click for model
     if (role === 'model') {
       setIsAnimating(true);
       setTimeout(() => setIsAnimating(false), 600); // Match animation duration
@@ -27,7 +28,7 @@ const Avatar: React.FC<AvatarProps> = ({ role, className = '', onClick }) => {
         relative flex items-center justify-center rounded-full shrink-0 shadow-lg border border-white/10
         transition-all duration-300
         ${role === 'model' 
-          ? 'w-10 h-10 bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sky-500/20 cursor-pointer hover:shadow-[0_0_20px_rgba(56,189,248,0.6)]' 
+          ? 'w-10 h-10 bg-gradient-to-br from-sky-500 to-indigo-600 text-white shadow-sky-500/20 cursor-pointer hover:shadow-[0_0_20px_rgba(56,189,248,0.6)] active:scale-90' 
           : 'w-10 h-10 bg-slate-700 text-slate-300'
         }
         ${isAnimating ? 'animate-jelly' : ''}
