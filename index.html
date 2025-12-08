@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -188,6 +189,15 @@
       }
       .animate-data-flow {
          animation: data-flow 1.5s linear infinite;
+      }
+
+      /* Particle Explosion for Chat Send */
+      @keyframes particle-out {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+      }
+      .animate-particle-out {
+        animation: particle-out 0.8s ease-out forwards;
       }
 
 

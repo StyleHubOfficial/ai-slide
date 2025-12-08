@@ -30,6 +30,9 @@ const MODELS: { id: AiModelId; label: string; desc: string; icon: React.ReactNod
     },
 ];
 
+// Tech Doodle Background Pattern (Data URI)
+const TECH_BG_PATTERN = `data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2338bdf8' fill-opacity='0.08'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 15.523 0 10s4.477-10 10-10zm10 8c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM30 60h20v20H30V60zm0-20h20v20H30V40z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E`;
+
 const ChatInterface: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([
         { id: 'welcome', role: 'model', text: 'Hello! I am Lakshya AI. Select a model above and ask me anything about presentations. 🤖✨', timestamp: Date.now() }
@@ -39,6 +42,13 @@ const ChatInterface: React.FC = () => {
     const [isSending, setIsSending] = useState(false); // State for button animation
     const [selectedModel, setSelectedModel] = useState<AiModelId>('gemini-2.5-flash');
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Prepare particles for animation
+    const particles = useRef(Array.from({ length: 12 }).map(() => ({
+        angle: Math.random() * 360,
+        dist: 40 + Math.random() * 40,
+        size: 2 + Math.random() * 3
+    }))).current;
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -88,7 +98,7 @@ const ChatInterface: React.FC = () => {
             } finally {
                 setIsTyping(false);
             }
-        }, 400); // 400ms delay for flight animation
+        }, 600); // Increased delay for full flight animation
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -138,11 +148,11 @@ const ChatInterface: React.FC = () => {
                 
                 {/* Tech Pattern Background (WhatsApp style but techy) */}
                 <div 
-                    className="absolute inset-0 opacity-[0.05] pointer-events-none"
+                    className="absolute inset-0 opacity-[0.4] pointer-events-none"
                     style={{
-                        backgroundImage: `radial-gradient(#38bdf8 1.5px, transparent 1.5px), radial-gradient(#38bdf8 1.5px, transparent 1.5px)`,
-                        backgroundSize: '32px 32px',
-                        backgroundPosition: '0 0, 16px 16px'
+                        backgroundImage: `url("${TECH_BG_PATTERN}")`,
+                        backgroundSize: '80px 80px',
+                        backgroundRepeat: 'repeat'
                     }}
                 ></div>
 
@@ -175,13 +185,16 @@ const ChatInterface: React.FC = () => {
                     {isTyping && (
                         <div className="flex w-full gap-4 animate-fade-in-up">
                             <Avatar role="model" />
-                            <div className="bg-slate-800/80 backdrop-blur-sm text-slate-400 p-4 rounded-2xl rounded-tl-none border border-slate-700/50 flex items-center gap-3 shadow-[0_0_15px_rgba(56,189,248,0.1)]">
-                                <div className="flex gap-1.5 h-3 items-center">
-                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce"></span>
-                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce delay-100"></span>
-                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce delay-200"></span>
+                            <div className="bg-slate-800/80 backdrop-blur-sm text-slate-400 p-4 rounded-2xl rounded-tl-none border border-slate-700/50 flex items-center gap-3 shadow-[0_0_15px_rgba(56,189,248,0.1)] relative overflow-hidden group">
+                                {/* Glow Effect */}
+                                <div className="absolute inset-0 bg-sky-500/5 animate-pulse"></div>
+                                
+                                <div className="flex gap-1.5 h-3 items-center relative z-10">
+                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce shadow-[0_0_8px_currentColor]"></span>
+                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce delay-100 shadow-[0_0_8px_currentColor]"></span>
+                                    <span className="w-2 h-2 bg-sky-400 rounded-full animate-bounce delay-200 shadow-[0_0_8px_currentColor]"></span>
                                 </div>
-                                <span className="text-xs text-sky-400/70 font-medium animate-pulse">Thinking...</span>
+                                <span className="text-xs text-sky-400/90 font-medium animate-pulse relative z-10">Generating Response...</span>
                             </div>
                         </div>
                     )}
@@ -200,18 +213,32 @@ const ChatInterface: React.FC = () => {
                         <Button 
                             onClick={handleSend} 
                             disabled={!input.trim() || isTyping || isSending}
-                            className={`absolute right-2 bottom-2 w-12 h-12 p-0 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-900/50 transition-all duration-300 ${isSending ? 'scale-90 bg-emerald-600' : 'scale-100'}`}
+                            className={`absolute right-2 bottom-2 w-12 h-12 p-0 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 flex items-center justify-center shadow-lg shadow-sky-900/50 transition-all duration-300 overflow-visible ${isSending ? 'bg-emerald-600 scale-90' : 'scale-100'}`}
                         >
+                            {/* Neon Particles on Send */}
+                            {isSending && particles.map((p, i) => {
+                                const tx = Math.cos(p.angle * Math.PI / 180) * p.dist;
+                                const ty = Math.sin(p.angle * Math.PI / 180) * p.dist;
+                                return (
+                                    <div 
+                                        key={i}
+                                        className="absolute left-1/2 top-1/2 bg-cyan-300 rounded-full animate-particle-out pointer-events-none"
+                                        style={{
+                                            width: p.size,
+                                            height: p.size,
+                                            '--tx': `${tx}px`,
+                                            '--ty': `${ty}px`,
+                                            boxShadow: '0 0 6px rgba(103,232,249,0.8)'
+                                        } as React.CSSProperties}
+                                    />
+                                );
+                            })}
+
                             {/* Animated Icon Container */}
-                            <div className={`transition-all duration-500 transform ${isSending ? 'translate-x-12 -translate-y-12 opacity-0 rotate-45' : 'translate-x-0 opacity-100'}`}>
-                                <svg className="w-6 h-6 text-white transform rotate-90 ml-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                            <div className={`transition-all duration-500 transform ease-in-out ${isSending ? 'translate-x-12 -translate-y-12 opacity-0 rotate-45 scale-75' : 'translate-x-0 opacity-100'}`}>
+                                <svg className="w-6 h-6 text-white transform rotate-90 ml-0.5 drop-shadow-md" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                 </svg>
-                            </div>
-                            
-                            {/* Success Checkmark (Visible when sending) */}
-                            <div className={`absolute inset-0 flex items-center justify-center transition-all duration-300 ${isSending ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}>
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                             </div>
                         </Button>
                     </div>
