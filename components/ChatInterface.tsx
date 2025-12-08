@@ -34,8 +34,8 @@ const MODELS: { id: AiModelId; label: string; desc: string; icon: React.ReactNod
 ];
 
 // Tech Doodle Background Pattern (Data URI)
-// Adjusted pattern size for "zoom out" effect
-const TECH_BG_PATTERN = `data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2338bdf8' fill-opacity='0.08'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 15.523 0 10s4.477-10 10-10zm10 8c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM30 60h20v20H30V60zm0-20h20v20H30V40z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E`;
+// Slightly darker stroke (higher opacity in hex or just better visibility)
+const TECH_BG_PATTERN = `data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2338bdf8' fill-opacity='0.2'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 15.523 0 10s4.477-10 10-10zm10 8c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM30 60h20v20H30V60zm0-20h20v20H30V40z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E`;
 
 const ChatInterface: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([
@@ -103,7 +103,7 @@ const ChatInterface: React.FC = () => {
             } finally {
                 setIsTyping(false);
             }
-        }, 600); // Increased delay for full flight animation
+        }, 800); // Increased delay for full flight animation
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -151,9 +151,9 @@ const ChatInterface: React.FC = () => {
 
             {/* Main Chat Area */}
             <div className="flex-1 relative flex flex-col overflow-hidden bg-slate-950">
-                {/* Tech Pattern Background - Zoomed Out (Size 60px) & More Transparent (0.15) */}
+                {/* Tech Pattern Background - Opacity increased to 0.4 for better visibility */}
                 <div 
-                    className="absolute inset-0 opacity-[0.15] pointer-events-none"
+                    className="absolute inset-0 opacity-[0.4] pointer-events-none"
                     style={{
                         backgroundImage: `url("${TECH_BG_PATTERN}")`,
                         backgroundSize: '60px 60px',
@@ -258,8 +258,8 @@ const ChatInterface: React.FC = () => {
                             );
                         })}
                         
-                        <div className={`transition-all duration-300 transform ${isSending ? 'translate-x-8 -translate-y-8 opacity-0' : 'translate-0 opacity-100'}`}>
-                            {/* Updated Paper Plane Icon */}
+                        <div className={`transition-all duration-700 ease-in-out transform ${isSending ? 'translate-x-32 -translate-y-32 rotate-12 opacity-0' : 'translate-0 rotate-0 opacity-100'}`}>
+                            {/* Paper Plane Icon */}
                             <svg className="w-5 h-5 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
                             </svg>
