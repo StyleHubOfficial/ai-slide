@@ -1,18 +1,65 @@
 
 import { GoogleGenAI } from "@google/genai";
-import type { GenerationParams, Presentation, Slide } from '../types';
+import type { GenerationParams, Presentation, Slide, ChatMessage, AiModelId } from '../types';
+
+// Helper to get API Key safely
+const getApiKey = () => {
+  let apiKey = '';
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    apiKey = (import.meta as any).env.VITE_API_KEY || (import.meta as any).env.API_KEY;
+  }
+  if (!apiKey && typeof process !== 'undefined' && process.env) {
+    apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  }
+  if (!apiKey && typeof process !== 'undefined' && process.env) {
+    apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY;
+  }
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please check your environment variables.");
+  }
+  return apiKey;
+};
+
+export async function sendChatMessage(history: ChatMessage[], newMessage: string, modelId: AiModelId = 'gemini-2.5-flash'): Promise<string> {
+    try {
+        const apiKey = getApiKey();
+        const ai = new GoogleGenAI({ apiKey });
+        
+        // Convert internal history to Gemini format
+        const chatHistory = history.map(msg => ({
+            role: msg.role,
+            parts: [{ text: msg.text }]
+        }));
+
+        const chat = ai.chats.create({
+            model: modelId,
+            history: chatHistory,
+            config: {
+                systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative presentation assistant. You help users brainstorm topics, outline slides, and answer technical questions about presentations. Keep answers concise, professional, and ALWAYS use relevant emojis to make the conversation friendly and engaging! 🤖✨🚀",
+            }
+        });
+
+        const result = await chat.sendMessage({ message: newMessage });
+        return result.text || "I'm having trouble thinking right now. 🤯";
+    } catch (error: any) {
+        console.error("Chat Error:", error);
+        return "Sorry, I encountered an error connecting to the AI. ⚠️";
+    }
+}
 
 export async function generatePresentation(params: GenerationParams): Promise<Presentation> {
-  // enhanced-env-check
-  let apiKey = process.env.API_KEY;
-  
-  if (!apiKey && typeof import.meta !== 'undefined' && (import.meta as any).env) {
-    apiKey = (import.meta as any).env.VITE_API_KEY;
-  }
-
-  if (!apiKey) {
+  let apiKey = '';
+  try {
+      apiKey = getApiKey();
+  } catch (e: any) {
+    console.error("API Key Loader: Failed to find any API Key in environment variables.");
     throw new Error(
-      "API Key is missing. If you are hosted on Vercel, please rename your environment variable to 'VITE_API_KEY' in the project settings and redeploy."
+      "API Key is missing. \n\n" +
+      "FOR VERCEL DEPLOYMENT:\n" +
+      "1. Go to Project Settings > Environment Variables\n" +
+      "2. Add a new variable named 'VITE_API_KEY'\n" +
+      "3. Paste your Google AI Studio key as the value\n" +
+      "4. Redeploy the app (System > Redeploy)"
     );
   }
 
@@ -47,7 +94,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
     2. **Depth**: 
        - NEVER use generic fluff like "Unlock the potential". 
        - ALWAYS use specific dates, names, formulas (write Math like 'a^2 + b^2 = c^2'), and hard facts.
-       - If the topic is technical (Math/Science), use the 'process' slide type to show step-by-step solving.
+       - If the topic is technical (Math/Science), use the 'process' type to show step-by-step solving.
 
     3. **Visuals (Crucial)**: 
        - For 'imagePrompt', do not write generic descriptions. Write EXACT instructions for a renderer.
@@ -137,6 +184,15 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
 
   } catch (error: any) {
     console.error("Error calling Gemini API:", error);
+    
+    // Better Error Messages for User
+    if (error.message.includes("403")) {
+        throw new Error("API Key Invalid or Expired. Please check your Vercel Environment Variables.");
+    }
+    if (error.message.includes("429")) {
+        throw new Error("System is busy (Quota Exceeded). Please wait 1 minute and try again.");
+    }
+    
     throw new Error(error.message || "Failed to generate presentation.");
   }
 }

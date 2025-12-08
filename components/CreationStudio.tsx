@@ -16,6 +16,8 @@ import HomeIcon from './icons/HomeIcon';
 import CommunityIcon from './icons/CommunityIcon';
 import CreateIcon from './icons/CreateIcon';
 import DownloadIcon from './icons/DownloadIcon';
+import RobotIcon from './icons/RobotIcon';
+import ChatInterface from './ChatInterface';
 import LoadingOverlay from './ui/LoadingOverlay';
 
 interface CreationStudioProps {
@@ -25,7 +27,7 @@ interface CreationStudioProps {
   isLoading: boolean;
 }
 
-type Tab = 'HOME' | 'CREATE' | 'COMMUNITY';
+type Tab = 'HOME' | 'CREATE' | 'COMMUNITY' | 'CHAT';
 
 const THEMES = [
     { id: PresentationStyle.NeonGrid, label: 'Neon Grid', bg: 'bg-slate-900', pattern: 'linear-gradient(rgba(6,182,212,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.2) 1px, transparent 1px)', color: 'text-cyan-400' },
@@ -187,6 +189,9 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
   const renderContent = () => {
     switch (activeTab) {
+        case 'CHAT':
+            return <ChatInterface />;
+
         case 'HOME': 
             return (
                 <div className="w-full max-w-4xl animate-fade-in-up space-y-8">
@@ -362,6 +367,10 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                 <HomeIcon className="w-5 h-5"/>
                 <span className="font-bold">Home</span>
             </button>
+            <button onClick={() => setActiveTab('CHAT')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CHAT' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+                <RobotIcon className="w-5 h-5"/>
+                <span className="font-bold">AI Assistant</span>
+            </button>
             <button onClick={() => setActiveTab('CREATE')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CREATE' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                 <CreateIcon className="w-5 h-5"/>
                 <span className="font-bold">Create</span>
@@ -384,17 +393,21 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       </main>
 
       {/* Mobile Nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 border-t border-white/10 grid grid-cols-3 items-center z-50 pb-safe">
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 border-t border-white/10 grid grid-cols-4 items-center z-50 pb-safe">
          <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 ${activeTab === 'HOME' ? 'text-sky-400' : 'text-slate-500'}`}>
             <HomeIcon className="w-6 h-6"/>
             <span className="text-[10px] font-bold">Home</span>
          </button>
          
-         <div className="flex justify-center relative -top-5">
-            <button onClick={() => setActiveTab('CREATE')} className={`w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${activeTab === 'CREATE' ? 'bg-sky-500 text-white' : 'bg-slate-800 text-slate-400 border border-slate-700'}`}>
-                <CreateIcon className="w-6 h-6"/>
-            </button>
-         </div>
+         <button onClick={() => setActiveTab('CHAT')} className={`flex flex-col items-center gap-1 ${activeTab === 'CHAT' ? 'text-sky-400' : 'text-slate-500'}`}>
+            <RobotIcon className="w-6 h-6"/>
+            <span className="text-[10px] font-bold">Chat</span>
+         </button>
+
+         <button onClick={() => setActiveTab('CREATE')} className={`flex flex-col items-center gap-1 ${activeTab === 'CREATE' ? 'text-sky-400' : 'text-slate-500'}`}>
+            <CreateIcon className="w-6 h-6"/>
+            <span className="text-[10px] font-bold">Create</span>
+         </button>
 
          <button onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center gap-1 ${activeTab === 'COMMUNITY' ? 'text-sky-400' : 'text-slate-500'}`}>
             <CommunityIcon className="w-6 h-6"/>

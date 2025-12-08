@@ -69,8 +69,8 @@ function App() {
       {/* Error Modal */}
       {error && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in-up">
-          <GlassCard className="max-w-md w-full border-red-500/30 shadow-[0_0_50px_rgba(220,38,38,0.2)]">
-            <div className="flex items-start justify-between mb-4">
+          <GlassCard className="max-w-xl w-full border-red-500/30 shadow-[0_0_50px_rgba(220,38,38,0.2)]">
+            <div className="flex items-start justify-between mb-4 border-b border-white/5 pb-4">
               <h3 className="text-xl font-bold text-red-400 flex items-center gap-2">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -81,9 +81,24 @@ function App() {
                 <XIcon className="w-6 h-6" />
               </button>
             </div>
-            <p className="text-slate-300 mb-6 leading-relaxed break-words text-sm">
-              {error}
-            </p>
+            
+            <div className="bg-red-500/10 p-4 rounded-lg mb-4 border border-red-500/20">
+                <p className="text-slate-200 font-medium whitespace-pre-wrap leading-relaxed text-sm">
+                  {error}
+                </p>
+            </div>
+
+            {error.includes("API Key") && (
+                <div className="bg-slate-900/50 p-4 rounded-lg text-xs text-slate-400 mb-4">
+                    <p className="font-bold text-slate-300 mb-2">Troubleshooting Vercel Deployment:</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                        <li>Go to Vercel Dashboard {'>'} Settings {'>'} Environment Variables</li>
+                        <li>Ensure Key Name is exactly: <code className="text-sky-400">VITE_API_KEY</code></li>
+                        <li>Ensure Value starts with: <code className="text-emerald-400">AIza...</code></li>
+                        <li>After saving, you <strong>MUST REDEPLOY</strong> the project for changes to apply.</li>
+                    </ul>
+                </div>
+            )}
             
             <div className="flex justify-end">
               <Button onClick={() => setError(null)} className="bg-slate-800 hover:bg-slate-700">
