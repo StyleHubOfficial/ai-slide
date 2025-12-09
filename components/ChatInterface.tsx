@@ -33,9 +33,13 @@ const MODELS: { id: AiModelId; label: string; desc: string; icon: React.ReactNod
     },
 ];
 
-// Tech Doodle Background Pattern (Data URI)
-// Slightly darker stroke (higher opacity in hex or just better visibility)
-const TECH_BG_PATTERN = `data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%2338bdf8' fill-opacity='0.2'%3E%3Cpath d='M50 50c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM10 10c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10S0 15.523 0 10s4.477-10 10-10zm10 8c0-5.523 4.477-10 10-10s10 4.477 10 10-4.477 10-10 10c0 5.523-4.477 10-10 10s-10-4.477-10-10 4.477-10 10-10zM30 60h20v20H30V60zm0-20h20v20H30V40z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E`;
+// --- Unique Layered Patterns ---
+// 1. Technical Grid Dots
+const PATTERN_DOTS = `data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%2338bdf8' fill-opacity='0.2'/%3E%3C/svg%3E`;
+// 2. Large Circuit Traces
+const PATTERN_CIRCUIT = `data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h40v20h-40z M90 40h20v50h-20z M30 80l20 20h40' stroke='%2338bdf8' stroke-width='1' fill='none' stroke-opacity='0.08'/%3E%3Ccircle cx='10' cy='10' r='3' fill='%2338bdf8' fill-opacity='0.1'/%3E%3C/svg%3E`;
+// 3. Hexagonal Lattice
+const PATTERN_HEX = `data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L55 20 L55 45 L30 60 L5 45 L5 20 Z' stroke='%236366f1' stroke-width='1' fill='none' stroke-opacity='0.07'/%3E%3C/svg%3E`;
 
 const ChatInterface: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([
@@ -151,13 +155,18 @@ const ChatInterface: React.FC = () => {
 
             {/* Main Chat Area */}
             <div className="flex-1 relative flex flex-col overflow-hidden bg-slate-950">
-                {/* Tech Pattern Background - Opacity increased to 0.4 for better visibility */}
+                {/* 
+                   Unique Layered Wallpaper 
+                   Combines 3 different patterns at different sizes and positions to create a non-repeating look.
+                */}
                 <div 
-                    className="absolute inset-0 opacity-[0.4] pointer-events-none"
+                    className="absolute inset-0 pointer-events-none"
                     style={{
-                        backgroundImage: `url("${TECH_BG_PATTERN}")`,
-                        backgroundSize: '60px 60px',
-                        backgroundRepeat: 'repeat'
+                        backgroundImage: `url("${PATTERN_DOTS}"), url("${PATTERN_CIRCUIT}"), url("${PATTERN_HEX}")`,
+                        backgroundSize: '24px 24px, 120px 120px, 100px 100px',
+                        backgroundPosition: '0 0, 0 0, 50px 50px',
+                        backgroundRepeat: 'repeat',
+                        opacity: 0.8
                     }}
                 ></div>
 
@@ -224,7 +233,8 @@ const ChatInterface: React.FC = () => {
             </div>
 
             {/* Input Area - Fixed Bottom for Full Screen Feel */}
-            <div className="shrink-0 p-3 md:p-4 bg-slate-900 border-t border-white/5 relative z-20 pb-0 md:pb-safe">
+            {/* Added pb-5 specifically for mobile to clear bottom nav */}
+            <div className="shrink-0 p-3 md:p-4 bg-slate-900 border-t border-white/5 relative z-20 pb-5 md:pb-safe">
                 <div className="max-w-4xl mx-auto flex gap-2 items-end">
                      <div className="flex-1 bg-black/40 border border-slate-700 focus-within:border-sky-500 rounded-2xl flex items-center min-h-[50px] transition-colors focus-within:bg-black/60">
                         <Textarea 
