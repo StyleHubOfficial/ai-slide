@@ -17,8 +17,10 @@ import CommunityIcon from './icons/CommunityIcon';
 import CreateIcon from './icons/CreateIcon';
 import DownloadIcon from './icons/DownloadIcon';
 import RobotIcon from './icons/RobotIcon';
+import HelpIcon from './icons/HelpIcon';
 import ChatInterface from './ChatInterface';
 import LoadingOverlay from './ui/LoadingOverlay';
+import TourGuide, { TourStep } from './ui/TourGuide';
 
 interface CreationStudioProps {
   onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => void;
@@ -29,12 +31,13 @@ interface CreationStudioProps {
 
 type Tab = 'HOME' | 'CREATE' | 'COMMUNITY' | 'CHAT';
 
+// NEW STUDY THEMES
 const THEMES = [
-    { id: PresentationStyle.NeonGrid, label: 'Neon Grid', bg: 'bg-slate-900', pattern: 'linear-gradient(rgba(6,182,212,0.2) 1px, transparent 1px), linear-gradient(90deg, rgba(6,182,212,0.2) 1px, transparent 1px)', color: 'text-cyan-400' },
-    { id: PresentationStyle.DarkDots, label: 'Dark Dots', bg: 'bg-zinc-900', pattern: 'radial-gradient(rgba(255,255,255,0.2) 1px, transparent 1px)', color: 'text-zinc-200' },
-    { id: PresentationStyle.SoftGradient, label: 'Flow', bg: 'bg-indigo-900', pattern: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: 'text-pink-300' },
-    { id: PresentationStyle.GeoPoly, label: 'Geometry', bg: 'bg-slate-800', pattern: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.05) 0px, transparent 2px, transparent 10px)', color: 'text-indigo-300' },
-    { id: PresentationStyle.Minimalist, label: 'Clean White', bg: 'bg-slate-100', pattern: 'linear-gradient(#cbd5e1 1px, transparent 1px)', color: 'text-slate-800' },
+    { id: PresentationStyle.Blackboard, label: 'Blackboard', bg: 'bg-[#1a2e1a]', pattern: 'radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px)', color: 'text-white' },
+    { id: PresentationStyle.Whiteboard, label: 'Whiteboard', bg: 'bg-white', pattern: 'radial-gradient(rgba(0,0,0,0.1) 1px, transparent 1px)', color: 'text-slate-800' },
+    { id: PresentationStyle.Notebook, label: 'Notebook', bg: 'bg-[#fdfbf7]', pattern: 'linear-gradient(#e5e7eb 1px, transparent 1px)', color: 'text-slate-700' },
+    { id: PresentationStyle.Blueprint, label: 'Blueprint', bg: 'bg-[#1e3a8a]', pattern: 'linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)', color: 'text-blue-100' },
+    { id: PresentationStyle.DigitalPad, label: 'Digital Pad', bg: 'bg-slate-900', pattern: 'linear-gradient(rgba(56,189,248,0.1) 1px, transparent 1px)', color: 'text-sky-400' },
 ];
 
 const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory, onCancelLoading, isLoading }) => {
@@ -43,8 +46,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   
   // Generator State
   const [topic, setTopic] = useState('');
-  const [style, setStyle] = useState<PresentationStyle>(PresentationStyle.NeonGrid);
-  const [slideCount, setSlideCount] = useState(8);
+  const [style, setStyle] = useState<PresentationStyle>(PresentationStyle.Blackboard);
+  const [slideCount, setSlideCount] = useState(7);
 
   // Converter State (Home)
   const [fileContext, setFileContext] = useState('');
@@ -57,12 +60,24 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
 
+  // Tour State
+  const [runTour, setRunTour] = useState(false);
+  const [tourSteps, setTourSteps] = useState<TourStep[]>([]);
+
   useEffect(() => {
     refreshData();
     
     // Real-time updates from other tabs
     const handleStorageChange = () => refreshData();
     window.addEventListener('storage', handleStorageChange);
+    
+    // Check if user has seen tour
+    const hasSeenTour = localStorage.getItem('lakshya_has_seen_tour');
+    if (!hasSeenTour) {
+        // Short delay to ensure rendering
+        setTimeout(() => handleStartTour(), 1000);
+    }
+
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
@@ -71,18 +86,58 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
     setUserHistory(communityService.getHistory());
   };
 
+  const handleStartTour = () => {
+      // Determine if mobile or desktop to set correct targets
+      const isMobile = window.innerWidth < 1024;
+      const steps: TourStep[] = [
+          {
+              targetId: 'center',
+              title: 'Welcome to Lakshya Study Studio',
+              content: 'Let\'s take a quick tour. We transform boring documents into beautiful, hand-drawn style study guides and lecture notes.'
+          },
+          {
+              targetId: isMobile ? 'nav-home-mob' : 'nav-home-desk',
+              title: 'Document Converter',
+              content: 'Upload PDFs or notes here. The AI will summarize and convert them into a visual blackboard lecture for you.'
+          },
+          {
+              targetId: isMobile ? 'nav-chat-mob' : 'nav-chat-desk',
+              title: 'AI Tutor',
+              content: 'Chat with the Professor AI to ask specific questions or brainstorm essay topics.'
+          },
+          {
+              targetId: isMobile ? 'nav-create-mob' : 'nav-create-desk',
+              title: 'Concept Builder',
+              content: 'Create a study guide from scratch. Just enter a topic (e.g., "Photosynthesis") and choose a visual style like Blackboard or Blueprint.'
+          },
+          {
+              targetId: isMobile ? 'nav-comm-mob' : 'nav-comm-desk',
+              title: 'Study Group',
+              content: 'Explore study guides shared by other students in the community.'
+          }
+      ];
+      setTourSteps(steps);
+      setRunTour(true);
+      setActiveTab('HOME'); // Ensure we start on a known tab
+  };
+
+  const handleTourComplete = () => {
+      setRunTour(false);
+      localStorage.setItem('lakshya_has_seen_tour', 'true');
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFileName(file.name);
-      setFileContext(`Presentation about: ${file.name}. (Simulated Content)`); 
+      setFileContext(`Study Material: ${file.name}. (Simulated Content)`); 
     }
   };
 
   const handleCreateAction = (type: 'architect' | 'convert') => {
      setLoadingType(type);
      if (type === 'convert') {
-        onCreate(fileName ? `Presentation derived from ${fileName}` : topic, style, fileContext, slideCount);
+        onCreate(fileName ? `Study Guide: ${fileName}` : topic, style, fileContext, slideCount);
      } else {
         onCreate(topic, style, '', slideCount);
      }
@@ -114,9 +169,9 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                 const context = `Presentation based on uploaded file: ${file.name}`;
                 const pres = await generatePresentation({
                     topic: `Analysis of ${file.name}`,
-                    style: PresentationStyle.NeonGrid,
+                    style: PresentationStyle.Blackboard,
                     fileContext: context,
-                    slideCount: 8
+                    slideCount: 7
                 });
                 communityService.publishDeck(pres, 'You (Converted)');
                 communityService.saveHistory(pres);
@@ -170,11 +225,19 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
               <button
                   key={theme.id}
                   onClick={() => setStyle(theme.id)}
-                  className={`relative h-20 rounded-lg overflow-hidden border-2 transition-all group ${style === theme.id ? 'border-sky-500 ring-2 ring-sky-500/30 scale-[1.02]' : 'border-slate-700 hover:border-slate-500'}`}
+                  className={`relative h-24 rounded-lg overflow-hidden border-2 transition-all group ${style === theme.id ? 'border-sky-500 ring-2 ring-sky-500/30 scale-[1.02]' : 'border-slate-700 hover:border-slate-500'}`}
               >
-                  <div className={`absolute inset-0 ${theme.bg}`} style={{ backgroundImage: theme.pattern, backgroundSize: theme.id === PresentationStyle.DarkDots ? '10px 10px' : '20px 20px' }}></div>
-                  <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors"></div>
-                  <span className={`absolute bottom-2 left-2 text-xs font-bold ${theme.id === PresentationStyle.Minimalist ? 'text-slate-900 bg-white/80' : 'text-white bg-black/50'} px-2 py-1 rounded backdrop-blur-sm`}>
+                  <div className={`absolute inset-0 ${theme.bg}`} style={{ backgroundImage: theme.pattern, backgroundSize: theme.id === PresentationStyle.Notebook ? '100% 20px' : '20px 20px' }}></div>
+                  <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors"></div>
+                  
+                  {/* Style Preview Elements */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                      <span className={`text-lg font-bold ${theme.color} ${theme.id === PresentationStyle.Blackboard ? 'font-chalk' : theme.id === PresentationStyle.Whiteboard ? 'font-marker' : theme.id === PresentationStyle.Notebook ? 'font-hand' : 'font-sans'}`}>
+                         Aa
+                      </span>
+                  </div>
+
+                  <span className={`absolute bottom-2 left-2 text-xs font-bold ${theme.id === PresentationStyle.Whiteboard || theme.id === PresentationStyle.Notebook ? 'text-slate-900 bg-white/80' : 'text-white bg-black/50'} px-2 py-1 rounded backdrop-blur-sm`}>
                       {theme.label}
                   </span>
                   {style === theme.id && (
@@ -196,30 +259,30 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
             return (
                 <div className="w-full max-w-4xl animate-fade-in-up space-y-8">
                     <header className="text-center lg:text-left">
-                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">Transform Documents</h1>
-                        <p className="text-slate-400 text-sm lg:text-lg">Convert PDF/PPT/Text to animated presentations.</p>
+                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">Convert Notes to Lectures</h1>
+                        <p className="text-slate-400 text-sm lg:text-lg">Upload study materials (PDF/Text) and get a visual blackboard summary.</p>
                     </header>
                     <GlassCard className="p-6 md:p-12 border-slate-700/50 bg-slate-900/40">
                          <div className="relative group mb-8">
-                            <Label className="text-sky-400 mb-3">Upload Document</Label>
+                            <Label className="text-sky-400 mb-3">Upload Study Material</Label>
                             <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-slate-700 rounded-xl cursor-pointer hover:border-sky-500 transition-all">
                                <ImageIcon className="w-12 h-12 text-slate-500 mb-4" />
-                               {fileName ? <p className="text-lg text-sky-400 font-bold">{fileName}</p> : <p className="text-slate-400">Click to Upload</p>}
+                               {fileName ? <p className="text-lg text-sky-400 font-bold">{fileName}</p> : <p className="text-slate-400">Click to Upload (PDF, TXT)</p>}
                                <input type="file" className="hidden" onChange={handleFileChange} accept=".txt,.md,.json,.pdf,.pptx" />
                             </label>
                          </div>
                          <div className="mb-8">
-                             <Label>Select Theme</Label>
+                             <Label>Select Teaching Style</Label>
                              <ThemeSelector />
                          </div>
                          <Button onClick={() => handleCreateAction('convert')} disabled={isLoading || !fileName} className="w-full h-12 text-lg bg-emerald-600 hover:bg-emerald-500">
-                            Convert Now
+                            Generate Lecture
                          </Button>
                     </GlassCard>
 
                     {/* HISTORY SECTION */}
                     <div className="mt-12">
-                         <h2 className="text-2xl font-bold text-white mb-6">My Creations</h2>
+                         <h2 className="text-2xl font-bold text-white mb-6">My Study Guides</h2>
                          {userHistory.length === 0 ? (
                              <div className="text-slate-500 text-center py-8 bg-slate-900/30 rounded-xl border border-dashed border-slate-800">No history yet.</div>
                          ) : (
@@ -228,7 +291,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                      <div key={h.title + Math.random()} onClick={() => onOpenHistory(h)} className="p-4 rounded-xl bg-slate-900 border border-slate-800 hover:border-sky-500/50 cursor-pointer group flex justify-between items-center transition-all">
                                          <div>
                                             <h4 className="font-bold text-slate-200 group-hover:text-sky-400 transition-colors">{h.title}</h4>
-                                            <p className="text-xs text-slate-500">{h.slides.length} Slides • {h.style}</p>
+                                            <p className="text-xs text-slate-500">{h.slides.length} Boards • {h.style}</p>
                                          </div>
                                          <div className="flex gap-2">
                                              <button onClick={(e) => handleDeleteHistory(e, h.title)} className="p-2 hover:bg-red-500/20 text-slate-600 hover:text-red-400 rounded-lg transition-colors"><XIcon className="w-4 h-4"/></button>
@@ -245,24 +308,24 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
             return (
                 <div className="w-full max-w-4xl animate-fade-in-up">
                     <header className="mb-8 lg:mb-12 text-center lg:text-left">
-                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">Architect your Vision</h1>
-                        <p className="text-slate-400 text-sm lg:text-lg">AI-powered cinematic deck generation.</p>
+                        <h1 className="text-3xl md:text-5xl font-bold text-white mb-2 tracking-tight">Concept Builder</h1>
+                        <p className="text-slate-400 text-sm lg:text-lg">AI-powered study guide generation from any topic.</p>
                     </header>
                     <GlassCard className="p-6 md:p-12 border-slate-700/50 bg-slate-900/40">
                          <div className="mb-8">
-                            <Label className="text-sky-400 mb-3">Topic</Label>
-                            <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. A pitch deck for a new AI startup..." className="h-32 text-lg bg-black/20" />
+                            <Label className="text-sky-400 mb-3">Topic / Question</Label>
+                            <Textarea value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Explain Quantum Entanglement like I'm 5..." className="h-32 text-lg bg-black/20" />
                          </div>
                          <div className="mb-8">
-                            <Label className="text-slate-400 mb-3">Select Visual Theme</Label>
+                            <Label className="text-slate-400 mb-3">Visual Style</Label>
                             <ThemeSelector />
                          </div>
                          <div className="mb-8">
-                             <Label className="text-slate-400">Length: {slideCount} Slides</Label>
+                             <Label className="text-slate-400">Length: {slideCount} Boards</Label>
                              <input type="range" min="3" max="12" value={slideCount} onChange={(e) => setSlideCount(parseInt(e.target.value))} className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 mt-4" />
                          </div>
                          <Button onClick={() => handleCreateAction('architect')} disabled={isLoading || !topic} className="w-full h-12 text-lg bg-sky-600 hover:bg-sky-500">
-                            Generate
+                            Generate Concepts
                          </Button>
                     </GlassCard>
                 </div>
@@ -272,15 +335,16 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
             return (
                 <div className="w-full max-w-5xl animate-fade-in-up">
                     <div className="flex justify-between items-center mb-8">
-                        <h1 className="text-3xl font-bold text-white">Community Hub</h1>
-                        <button onClick={() => setShowUploadModal(true)} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20"><UploadIcon className="w-4 h-4"/> Publish Deck</button>
+                        <h1 className="text-3xl font-bold text-white">Study Group Hub</h1>
+                        <button onClick={() => setShowUploadModal(true)} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20"><UploadIcon className="w-4 h-4"/> Share Notes</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {communityDecks.map((deck) => (
                             <GlassCard key={deck.id} className="p-0 overflow-hidden group hover:border-sky-500/50 relative">
-                                <div className={`h-36 w-full ${deck.style === PresentationStyle.Minimalist ? 'bg-slate-200' : 'bg-slate-800'} relative`}>
+                                <div className={`h-36 w-full ${deck.style === PresentationStyle.Whiteboard ? 'bg-slate-200' : 'bg-slate-800'} relative`}>
                                     <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                                         <div className={`w-full h-full ${deck.style === PresentationStyle.DarkDots ? 'bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[length:10px_10px]' : ''}`}></div>
+                                         {/* Simple Preview Pattern */}
+                                         <div className="w-full h-full bg-slate-900 opacity-20"></div>
                                     </div>
                                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
                                     <div className="absolute bottom-3 left-4 right-4 z-10">
@@ -293,7 +357,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                      <div className="flex-1 py-2 rounded bg-white/5 flex items-center justify-center gap-1 text-xs font-bold text-slate-300">
                                         <span className="text-pink-500">♥</span> {deck.likes}
                                      </div>
-                                     <button onClick={() => onOpenHistory(deck)} className="flex-1 py-2 rounded bg-sky-600/20 hover:bg-sky-600/30 text-xs font-bold text-sky-400 transition-colors">View</button>
+                                     <button onClick={() => onOpenHistory(deck)} className="flex-1 py-2 rounded bg-sky-600/20 hover:bg-sky-600/30 text-xs font-bold text-sky-400 transition-colors">Study</button>
                                      <button onClick={(e) => handleDownloadDeck(e, deck)} className="py-2 px-3 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 transition-colors" title="Download JSON">
                                         <DownloadIcon className="w-4 h-4" />
                                      </button>
@@ -306,7 +370,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                             <GlassCard className="max-w-md w-full p-6 border-sky-500/30 relative">
                                 <div className="flex justify-between items-center mb-6">
-                                    <h3 className="text-xl font-bold text-white">Publish to Community</h3>
+                                    <h3 className="text-xl font-bold text-white">Share Notes</h3>
                                     <button onClick={() => setShowUploadModal(false)}><XIcon className="w-6 h-6"/></button>
                                 </div>
                                 
@@ -349,6 +413,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
   return (
     <div className="h-screen w-screen bg-slate-950 text-slate-200 flex flex-col lg:flex-row overflow-hidden font-sans">
+      <TourGuide steps={tourSteps} isOpen={runTour} onClose={() => setRunTour(false)} onComplete={handleTourComplete} />
+
       {(isLoading || internalLoading) && (
           <div className="fixed inset-0 z-[100]">
             <LoadingOverlay type={loadingType} />
@@ -365,23 +431,31 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
             <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
          </div>
          <nav className="flex-col px-4 space-y-2 flex flex-1">
-            <button onClick={() => setActiveTab('HOME')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'HOME' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+            <button id="nav-home-desk" onClick={() => setActiveTab('HOME')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'HOME' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                 <HomeIcon className="w-5 h-5"/>
                 <span className="font-bold">Home</span>
             </button>
-            <button onClick={() => setActiveTab('CHAT')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CHAT' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+            <button id="nav-chat-desk" onClick={() => setActiveTab('CHAT')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CHAT' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                 <RobotIcon className="w-5 h-5"/>
-                <span className="font-bold">AI Assistant</span>
+                <span className="font-bold">AI Tutor</span>
             </button>
-            <button onClick={() => setActiveTab('CREATE')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CREATE' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+            <button id="nav-create-desk" onClick={() => setActiveTab('CREATE')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'CREATE' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                 <CreateIcon className="w-5 h-5"/>
                 <span className="font-bold">Create</span>
             </button>
-            <button onClick={() => setActiveTab('COMMUNITY')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'COMMUNITY' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
+            <button id="nav-comm-desk" onClick={() => setActiveTab('COMMUNITY')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'COMMUNITY' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
                 <CommunityIcon className="w-5 h-5"/>
                 <span className="font-bold">Community</span>
             </button>
          </nav>
+         
+         {/* Sidebar Footer with Help Button */}
+         <div className="px-4 mt-auto">
+             <button onClick={handleStartTour} className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-slate-500 hover:text-white hover:bg-white/5 transition-colors">
+                 <HelpIcon className="w-5 h-5" />
+                 <span className="font-bold">Help & Tour</span>
+             </button>
+         </div>
       </aside>
 
       {/* Main Content */}
@@ -401,24 +475,24 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
       {/* Mobile Nav */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 border-t border-white/10 grid grid-cols-4 items-center z-50 pb-safe">
-         <button onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 ${activeTab === 'HOME' ? 'text-sky-400' : 'text-slate-500'}`}>
+         <button id="nav-home-mob" onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 ${activeTab === 'HOME' ? 'text-sky-400' : 'text-slate-500'}`}>
             <HomeIcon className="w-6 h-6"/>
             <span className="text-[10px] font-bold">Home</span>
          </button>
          
-         <button onClick={() => setActiveTab('CHAT')} className={`flex flex-col items-center gap-1 ${activeTab === 'CHAT' ? 'text-sky-400' : 'text-slate-500'}`}>
+         <button id="nav-chat-mob" onClick={() => setActiveTab('CHAT')} className={`flex flex-col items-center gap-1 ${activeTab === 'CHAT' ? 'text-sky-400' : 'text-slate-500'}`}>
             <RobotIcon className="w-6 h-6"/>
-            <span className="text-[10px] font-bold">Chat</span>
+            <span className="text-[10px] font-bold">Tutor</span>
          </button>
 
-         <button onClick={() => setActiveTab('CREATE')} className={`flex flex-col items-center gap-1 ${activeTab === 'CREATE' ? 'text-sky-400' : 'text-slate-500'}`}>
+         <button id="nav-create-mob" onClick={() => setActiveTab('CREATE')} className={`flex flex-col items-center gap-1 ${activeTab === 'CREATE' ? 'text-sky-400' : 'text-slate-500'}`}>
             <CreateIcon className="w-6 h-6"/>
             <span className="text-[10px] font-bold">Create</span>
          </button>
 
-         <button onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center gap-1 ${activeTab === 'COMMUNITY' ? 'text-sky-400' : 'text-slate-500'}`}>
+         <button id="nav-comm-mob" onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center gap-1 ${activeTab === 'COMMUNITY' ? 'text-sky-400' : 'text-slate-500'}`}>
             <CommunityIcon className="w-6 h-6"/>
-            <span className="text-[10px] font-bold">Community</span>
+            <span className="text-[10px] font-bold">Groups</span>
          </button>
       </div>
     </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { Presentation, PresentationStyle, TransitionStyle } from '../types';
 import { SlideRenderer, getAIImageUrl } from './SlideRenderers';
@@ -33,11 +34,11 @@ const imageToBase64 = async (url: string): Promise<string | null> => {
 }
 
 const THEMES = [
-    { id: PresentationStyle.NeonGrid, label: 'Neon' },
-    { id: PresentationStyle.DarkDots, label: 'Dots' },
-    { id: PresentationStyle.SoftGradient, label: 'Flow' },
-    { id: PresentationStyle.GeoPoly, label: 'Geo' },
-    { id: PresentationStyle.Minimalist, label: 'Light' },
+    { id: PresentationStyle.Blackboard, label: 'Chalk' },
+    { id: PresentationStyle.Whiteboard, label: 'Marker' },
+    { id: PresentationStyle.Notebook, label: 'Paper' },
+    { id: PresentationStyle.Blueprint, label: 'Print' },
+    { id: PresentationStyle.DigitalPad, label: 'Dark' },
 ];
 
 const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClose }) => {
@@ -101,7 +102,7 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
         pptSlide.background = { color: colors.bg };
         
         if (slide.imagePrompt) {
-            const b64 = await imageToBase64(getAIImageUrl(slide.imagePrompt));
+            const b64 = await imageToBase64(getAIImageUrl(slide.imagePrompt, activeStyle));
             if (b64) pptSlide.addImage({ data: b64, x: 0, y: 0, w: '100%', h: '100%', sizing: { type: 'cover', w: '100%', h: '100%' } });
         }
         
@@ -289,10 +290,11 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
 
 const getPPTXColors = (style: PresentationStyle) => {
   switch (style) {
-    case PresentationStyle.NeonGrid: return { bg: '0F172A', text: '22D3EE' };
-    case PresentationStyle.Minimalist: return { bg: 'F8FAFC', text: '0F172A' };
-    case PresentationStyle.DarkDots: return { bg: '09090B', text: 'E4E4E7' };
-    case PresentationStyle.GeoPoly: return { bg: '1E1B4B', text: 'E0E7FF' };
+    case PresentationStyle.Blackboard: return { bg: '1A2E1A', text: 'FFFFFF' };
+    case PresentationStyle.Whiteboard: return { bg: 'FFFFFF', text: '1E293B' };
+    case PresentationStyle.Notebook: return { bg: 'FDFBF7', text: '334155' };
+    case PresentationStyle.Blueprint: return { bg: '1E3A8A', text: 'DBEAFE' };
+    case PresentationStyle.DigitalPad: return { bg: '0F172A', text: 'E2E8F0' };
     default: return { bg: '000000', text: 'FFFFFF' };
   }
 }

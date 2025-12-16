@@ -1,3 +1,4 @@
+
 import { SharedPresentation, Presentation, PresentationStyle } from '../types';
 
 const STORAGE_KEY = 'lumina_community_decks';
@@ -10,7 +11,7 @@ const SEED_DECKS: SharedPresentation[] = [
     topic: 'Future of AI',
     title: 'The Generative Age',
     author: 'Sarah Connors',
-    style: PresentationStyle.NeonGrid,
+    style: PresentationStyle.DigitalPad,
     likes: 124,
     downloads: 45,
     sharedBy: 'SarahC',
@@ -22,7 +23,7 @@ const SEED_DECKS: SharedPresentation[] = [
     topic: 'Sustainable Energy',
     title: 'Green Tech Revolution',
     author: 'EcoLabs',
-    style: PresentationStyle.SoftGradient,
+    style: PresentationStyle.Whiteboard,
     likes: 89,
     downloads: 12,
     sharedBy: 'GreenGuy',
@@ -34,7 +35,7 @@ const SEED_DECKS: SharedPresentation[] = [
     topic: 'Q4 Strategy',
     title: 'Q4 Marketing Blitz',
     author: 'Corp Dynamics',
-    style: PresentationStyle.Minimalist,
+    style: PresentationStyle.Blueprint,
     likes: 256,
     downloads: 110,
     sharedBy: 'BizMaster',

@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Lakshya Presentation Studio</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- HANDWRITING FONTS FOR STUDY THEMES -->
+    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=Gloria+Hallelujah&family=Indie+Flower&family=Patrick+Hand&family=Permanent+Marker&family=Kalam:wght@300;400;700&display=swap" rel="stylesheet">
+    
     <style>
       /* Custom Scrollbar */
       ::-webkit-scrollbar {
@@ -248,6 +251,20 @@
         animation: robot-bounce 0.4s ease-in-out infinite;
       }
 
+      /* Chalk Effect Utility */
+      .font-chalk {
+        font-family: 'Patrick Hand', cursive;
+      }
+      .font-marker {
+        font-family: 'Permanent Marker', cursive;
+      }
+      .font-hand {
+        font-family: 'Indie Flower', cursive;
+      }
+      .font-draft {
+        font-family: 'Architects Daughter', cursive;
+      }
+
       /* Stagger Utility */
       .stagger-1 { animation-delay: 100ms; }
       .stagger-2 { animation-delay: 200ms; }
@@ -255,7 +272,7 @@
       .stagger-4 { animation-delay: 400ms; }
       .stagger-5 { animation-delay: 500ms; }
 
-      /* Print Styles - Crucial for PDF Export */
+      /* Print Styles */
       @page {
         size: landscape;
         margin: 0;

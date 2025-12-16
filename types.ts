@@ -1,10 +1,10 @@
 
 export enum PresentationStyle {
-  DarkDots = "Dark Dots",
-  NeonGrid = "Neon Grid",
-  SoftGradient = "Soft Gradient",
-  GeoPoly = "Geometric",
-  Minimalist = "Clean White"
+  Blackboard = "Blackboard",
+  Whiteboard = "Whiteboard",
+  Notebook = "Notebook",
+  Blueprint = "Blueprint",
+  DigitalPad = "Digital Pad"
 }
 
 export type TransitionStyle = 'fade' | 'zoom' | 'hologram' | 'shutter' | 'glitch' | 'cube';

@@ -56,7 +56,7 @@ export async function sendChatMessage(history: ChatMessage[], newMessage: string
                 model: modelId,
                 history: chatHistory,
                 config: {
-                    systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative presentation assistant. You help users brainstorm topics, outline slides, and answer technical questions about presentations. Keep answers concise, professional, and ALWAYS use relevant emojis to make the conversation friendly and engaging! 🤖✨🚀",
+                    systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative study assistant. You help users brainstorm study topics, outline lecture notes, and answer technical questions. Keep answers educational, concise, and professional. Use emojis! 📚🎓✏️",
                 }
             });
 
@@ -93,37 +93,42 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
   const safeSlideCount = Math.min(slideCount, 15);
 
   const prompt = `
-    ROLE: You are an Elite Academic Professor and World-Class Information Designer (ex-McKinsey/Nature Journal).
-    TASK: Create a structurally rigorous, visually stunning, and fact-dense presentation deck.
+    ROLE: You are an Elite Professor and Educational Information Designer.
+    TASK: Create a visual STUDY GUIDE / LECTURE SERIES on the topic.
+    FORMAT: The content will be rendered on a ${style} surface (e.g., Blackboard with chalk, Whiteboard with marker).
     
     INPUT CONTEXT:
     - TOPIC: "${topic}"
     - STYLE: ${style}
-    - TARGET LENGTH: ${safeSlideCount} Slides
-    ${fileContext ? `- SOURCE MATERIAL (CRITICAL): The user has provided a document/file. You MUST extract the EXACT structure, definitions, formulas, and key points from this text below. Do not summarize loosely; convert the actual content into slides.\n\nSOURCE TEXT START:\n${fileContext.substring(0, 30000)}\nSOURCE TEXT END.` : ''}
+    - TARGET LENGTH: ${safeSlideCount} Concept Boards (Slides)
+    ${fileContext ? `- SOURCE MATERIAL (CRITICAL): The user has provided a document/file. You MUST extract the EXACT structure, definitions, formulas, and key points from this text below. Do not summarize loosely; convert the actual content into teaching concepts.\n\nSOURCE TEXT START:\n${fileContext.substring(0, 30000)}\nSOURCE TEXT END.` : ''}
 
     ---------------------------------------------------------
-    CONTENT STRATEGY (MIMIC TEXTBOOK QUALITY):
+    CONTENT STRATEGY (EDUCATIONAL & CONCEPTUAL):
     1. **Structure**: 
-       - Slide 1: Title (Impactful).
-       - Slide 2: Foundations/Definitions (Etymology, Core Concept).
-       - Slide 3-4: The "How" (Mechanisms, Formulas, Ratios - use 'process' or 'content' layouts).
-       - Slide 5: Visual Diagram logic (Explain a diagram in bullet points).
-       - Slide 6: Real World Application (Where is this used?).
-       - Slide 7: Example/Case Study (Step-by-step problem solving).
-       - Last Slide: Summary/References.
+       - Board 1: Topic Overview & Learning Goals (Title).
+       - Board 2: Fundamental Definitions (The "What").
+       - Board 3-4: Core Mechanisms/Logic (The "How"). Use 'process' or 'content' layouts.
+       - Board 5: Deep Dive Diagram logic (Explain a concept that needs a drawing).
+       - Board 6: Key Formulas or Data Trends (if applicable).
+       - Board 7: Real World Application / Case Study.
+       - Last Board: Summary Checklist.
 
-    2. **Depth**: 
-       - NEVER use generic fluff like "Unlock the potential". 
-       - ALWAYS use specific dates, names, formulas (write Math like 'a^2 + b^2 = c^2'), and hard facts.
-       - If the topic is technical (Math/Science), use the 'process' type to show step-by-step solving.
+    2. **Tone**: 
+       - Act like a teacher writing on a board. 
+       - Use arrows, steps, and clear, concise bullet points.
+       - Avoid corporate jargon. Use academic/tutorial language.
+       - For Math/Science: Write explicit equations.
+       - For History/Literature: Write timelines or character maps.
 
     3. **Visuals (Crucial)**: 
-       - For 'imagePrompt', do not write generic descriptions. Write EXACT instructions for a renderer.
-       - Example: "A clean white background technical diagram of a right-angled triangle with sides labeled Hypotenuse, Opposite, and Adjacent, vector style, education".
-       - Example: "Photorealistic 8k macro shot of a CPU silicon die, dramatic blue lighting".
+       - The 'imagePrompt' field represents a DRAWING on the board.
+       - IF Style is Blackboard: prompt should start with "Chalk drawing on blackboard, white chalk lines, sketch style..."
+       - IF Style is Whiteboard: prompt should start with "Marker drawing on whiteboard, colorful marker lines, hand drawn..."
+       - IF Style is Blueprint: prompt should start with "Technical blueprint schematic, white lines on blue, vector style..."
+       - Example: "Chalk drawing of a cell structure with labels, simple white lines on dark background".
 
-    4. **Speaker Notes**: Write a script that teaches the slide, not just reads it.
+    4. **Speaker Notes**: Write a lecture script for the professor to say while this board is shown.
 
     ---------------------------------------------------------
     JSON OUTPUT RULES:
@@ -136,32 +141,23 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
     JSON TEMPLATE:
     {
       "title": "String",
-      "author": "Lakshya Studio AI",
+      "author": "Lakshya AI",
       "slides": [
         {
           "id": "1",
           "type": "title",
-          "title": "Main Title",
-          "subtitle": "Compelling Subtitle",
-          "imagePrompt": "Detailed visual description",
-          "speakerNotes": "Script"
+          "title": "Course Title",
+          "subtitle": "Lesson 1: Introduction",
+          "imagePrompt": "Chalk drawing of...",
+          "speakerNotes": "Welcome class..."
         },
         {
           "id": "2",
           "type": "content",
-          "title": "Headline",
-          "bulletPoints": ["Fact 1", "Fact 2", "Fact 3"],
-          "imagePrompt": "Diagram description",
+          "title": "Core Concept",
+          "bulletPoints": ["Definition...", "Key Principle...", "Example..."],
+          "imagePrompt": "Hand drawn diagram of...",
           "layout": "split"
-        },
-        {
-          "id": "3",
-          "type": "process",
-          "title": "How it Works / Steps",
-          "processSteps": [
-            {"title": "Step 1", "description": "Details"},
-            {"title": "Step 2", "description": "Details"}
-          ]
         }
       ]
     }
@@ -201,7 +197,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
       };
     } catch (parseError) {
       console.error("JSON Parse Error:", parseError);
-      throw new Error("The AI response was too complex to parse. Try reducing the slide count to 8.");
+      throw new Error("The AI response was too complex to parse. Try reducing the slide count.");
     }
 
   } catch (error: any) {
