@@ -5,58 +5,92 @@ import Textarea from './ui/Textarea';
 import Avatar from './ui/Avatar';
 import { ChatMessage, AiModelId } from '../types';
 import { sendChatMessage } from '../services/geminiService';
+import { GoogleGenAI, Modality, LiveServerMessage } from "@google/genai";
+import Select from './ui/Select';
 
-const MODELS: { id: AiModelId; label: string; desc: string; icon: React.ReactNode }[] = [
-    { 
-        id: 'gemini-2.5-flash', 
-        label: 'Flash 2.5', 
-        desc: 'Balanced', 
-        icon: <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-    },
-    { 
-        id: 'gemini-flash-lite-latest', 
-        label: 'Flash Lite', 
-        desc: 'Fastest', 
-        icon: <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
-    },
-    { 
-        id: 'gemini-3-pro-preview', 
-        label: 'Gemini 3', 
-        desc: 'Reasoning', 
-        icon: <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>
-    },
-    { 
-        id: 'gemini-2.5-flash-image', 
-        label: 'Imagen', 
-        desc: 'Generate Images', 
-        icon: <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-    },
+// Live Mode Languages
+const LANGUAGES = [
+    { id: 'Hinglish', label: 'Hinglish (Default)', prompt: "You are Lakshya, a friendly and smart AI tutor. You speak in Hinglish (a natural mix of Hindi and English). Your tone is conversational, encouraging, and educational, like an Indian professor or friend. Use Hindi words for emphasis." },
+    { id: 'Hindi', label: 'Hindi', prompt: "आप लक्ष्य हैं, एक सहायक और बुद्धिमान AI शिक्षक। कृपया शुद्ध और सरल हिंदी में बात करें। आपका लहज़ा विनम्र और उत्साहजनक होना चाहिए।" },
+    { id: 'English', label: 'English', prompt: "You are Lakshya, a helpful AI tutor. Please respond in clear, concise, and professional English." },
 ];
 
-// --- Unique Layered Patterns ---
-// 1. Technical Grid Dots
-const PATTERN_DOTS = `data:image/svg+xml,%3Csvg width='24' height='24' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='2' cy='2' r='1' fill='%2338bdf8' fill-opacity='0.2'/%3E%3C/svg%3E`;
-// 2. Large Circuit Traces
-const PATTERN_CIRCUIT = `data:image/svg+xml,%3Csvg width='120' height='120' viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M10 10h40v20h-40z M90 40h20v50h-20z M30 80l20 20h40' stroke='%2338bdf8' stroke-width='1' fill='none' stroke-opacity='0.08'/%3E%3Ccircle cx='10' cy='10' r='3' fill='%2338bdf8' fill-opacity='0.1'/%3E%3C/svg%3E`;
-// 3. Hexagonal Lattice
-const PATTERN_HEX = `data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5 L55 20 L55 45 L30 60 L5 45 L5 20 Z' stroke='%236366f1' stroke-width='1' fill='none' stroke-opacity='0.07'/%3E%3C/svg%3E`;
+// --- Helpers for Live API ---
+const getApiKey = () => {
+  let apiKey = '';
+  if (typeof import.meta !== 'undefined' && (import.meta as any).env) {
+    apiKey = (import.meta as any).env.VITE_API_KEY || (import.meta as any).env.API_KEY;
+  }
+  if (!apiKey && typeof process !== 'undefined' && process.env) {
+    apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  }
+  if (!apiKey && typeof process !== 'undefined' && process.env) {
+    apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY;
+  }
+  return apiKey;
+};
+
+// Custom Audio Decoding for Raw PCM
+function decode(base64: string) {
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function encode(bytes: Uint8Array) {
+  let binary = '';
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+async function decodeAudioData(
+  data: Uint8Array,
+  ctx: AudioContext,
+  sampleRate: number,
+  numChannels: number,
+): Promise<AudioBuffer> {
+  const dataInt16 = new Int16Array(data.buffer);
+  const frameCount = dataInt16.length / numChannels;
+  const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
+
+  for (let channel = 0; channel < numChannels; channel++) {
+    const channelData = buffer.getChannelData(channel);
+    for (let i = 0; i < frameCount; i++) {
+      channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
+    }
+  }
+  return buffer;
+}
 
 const ChatInterface: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([
-        { id: 'welcome', role: 'model', text: 'Hello! I am Lakshya AI. Select a model above and ask me anything about presentations. 🤖✨', timestamp: Date.now() }
+        { id: 'welcome', role: 'model', text: 'Namaste! I am Lakshya. You can chat with me or start a Live Voice Session in Hinglish. 🎙️', timestamp: Date.now() }
     ]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const [isSending, setIsSending] = useState(false); // State for button animation
-    const [selectedModel, setSelectedModel] = useState<AiModelId>('gemini-2.5-flash');
-    const scrollRef = useRef<HTMLDivElement>(null);
+    
+    // --- Live Mode State ---
+    const [isLive, setIsLive] = useState(false);
+    const [isConnecting, setIsConnecting] = useState(false);
+    const [selectedLanguage, setSelectedLanguage] = useState(LANGUAGES[0].id);
+    const [liveVolume, setLiveVolume] = useState(0); 
 
-    // Prepare particles for animation
-    const particles = useRef(Array.from({ length: 12 }).map(() => ({
-        angle: Math.random() * 360,
-        dist: 40 + Math.random() * 40,
-        size: 2 + Math.random() * 3
-    }))).current;
+    // --- Live Mode Refs ---
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const inputContextRef = useRef<AudioContext | null>(null);
+    const nextStartTimeRef = useRef<number>(0);
+    const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
+    const sessionRef = useRef<Promise<any> | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -64,219 +98,337 @@ const ChatInterface: React.FC = () => {
         }
     }, [messages, isTyping]);
 
-    const handleSend = async () => {
-        if (!input.trim() || isTyping || isSending) return;
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            stopLiveSession();
+        };
+    }, []);
 
-        // Trigger button animation
-        setIsSending(true);
+    const stopLiveSession = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        if (inputContextRef.current) {
+            inputContextRef.current.close();
+            inputContextRef.current = null;
+        }
+        if (audioContextRef.current) {
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+        sourcesRef.current.forEach(source => source.stop());
+        sourcesRef.current.clear();
+        
+        setIsLive(false);
+        setIsConnecting(false);
+        setLiveVolume(0);
+        // Note: We can't explicitly "close" the session promise, but cutting audio context effectively kills the client side processing
+    };
 
-        const textToSend = input.trim();
-        setInput(''); // Clear input immediately
+    const startLiveSession = async () => {
+        if (isLive || isConnecting) return;
+        setIsConnecting(true);
 
-        // Delay processing slightly to allow animation to play
-        setTimeout(async () => {
-            const userMsg: ChatMessage = {
-                id: Date.now().toString(),
-                role: 'user',
-                text: textToSend,
-                timestamp: Date.now()
+        try {
+            const apiKey = getApiKey();
+            if (!apiKey) throw new Error("API Key missing");
+            const ai = new GoogleGenAI({ apiKey });
+
+            // 1. Audio Setup
+            const inputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            const outputCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+            
+            inputContextRef.current = inputCtx;
+            audioContextRef.current = outputCtx;
+            nextStartTimeRef.current = 0;
+
+            // Output Node
+            const outputNode = outputCtx.createGain();
+            outputNode.connect(outputCtx.destination);
+
+            // Input Stream
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+            const source = inputCtx.createMediaStreamSource(stream);
+            
+            // Worklet/ScriptProcessor for streaming input
+            const scriptProcessor = inputCtx.createScriptProcessor(4096, 1, 1);
+            scriptProcessor.onaudioprocess = (e) => {
+                const inputData = e.inputBuffer.getChannelData(0);
+                
+                // Visualizer Volume Math
+                let sum = 0;
+                for(let i=0; i<inputData.length; i++) sum += inputData[i] * inputData[i];
+                const rms = Math.sqrt(sum / inputData.length);
+                setLiveVolume(Math.min(rms * 10, 1)); 
+
+                // Encode PCM
+                const l = inputData.length;
+                const int16 = new Int16Array(l);
+                for (let i = 0; i < l; i++) {
+                    int16[i] = inputData[i] * 32768;
+                }
+                const base64Data = encode(new Uint8Array(int16.buffer));
+
+                if (sessionRef.current) {
+                    sessionRef.current.then((session: any) => {
+                        session.sendRealtimeInput({
+                            media: {
+                                mimeType: 'audio/pcm;rate=16000',
+                                data: base64Data
+                            }
+                        });
+                    });
+                }
             };
 
-            setMessages(prev => [...prev, userMsg]);
-            setIsTyping(true);
-            setIsSending(false); // Reset button animation state
+            source.connect(scriptProcessor);
+            scriptProcessor.connect(inputCtx.destination);
 
-            try {
-                const response = await sendChatMessage(messages, userMsg.text, selectedModel);
-                
-                const botMsg: ChatMessage = {
-                    id: (Date.now() + 1).toString(),
-                    role: 'model',
-                    text: response.text,
-                    images: response.images,
-                    timestamp: Date.now()
-                };
-                setMessages(prev => [...prev, botMsg]);
-            } catch (error) {
-                setMessages(prev => [...prev, {
-                    id: Date.now().toString(),
-                    role: 'model',
-                    text: "Sorry, I encountered a network error. Please try again. ⚠️",
-                    timestamp: Date.now()
-                }]);
-            } finally {
-                setIsTyping(false);
-            }
-        }, 800); // Increased delay for full flight animation
+            // 2. Connect to Gemini Live
+            const langConfig = LANGUAGES.find(l => l.id === selectedLanguage) || LANGUAGES[0];
+            
+            const sessionPromise = ai.live.connect({
+                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                callbacks: {
+                    onopen: () => {
+                        console.log("Live Connected");
+                        setIsLive(true);
+                        setIsConnecting(false);
+                    },
+                    onmessage: async (message: LiveServerMessage) => {
+                        const base64Audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+                        if (base64Audio) {
+                            if (!audioContextRef.current) return;
+                            
+                            // Ensure smooth playback timing
+                            nextStartTimeRef.current = Math.max(nextStartTimeRef.current, audioContextRef.current.currentTime);
+                            
+                            const audioBuffer = await decodeAudioData(
+                                decode(base64Audio),
+                                audioContextRef.current,
+                                24000,
+                                1
+                            );
+                            
+                            const sourceNode = audioContextRef.current.createBufferSource();
+                            sourceNode.buffer = audioBuffer;
+                            sourceNode.connect(outputNode);
+                            sourceNode.addEventListener('ended', () => {
+                                sourcesRef.current.delete(sourceNode);
+                            });
+                            
+                            sourceNode.start(nextStartTimeRef.current);
+                            nextStartTimeRef.current += audioBuffer.duration;
+                            sourcesRef.current.add(sourceNode);
+                        }
+                    },
+                    onclose: () => {
+                        console.log("Live Closed");
+                        stopLiveSession();
+                    },
+                    onerror: (e) => {
+                        console.error("Live Error", e);
+                        stopLiveSession();
+                        alert("Connection to AI Voice Agent failed.");
+                    }
+                },
+                config: {
+                    responseModalities: [Modality.AUDIO],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
+                    },
+                    systemInstruction: langConfig.prompt
+                }
+            });
+
+            sessionRef.current = sessionPromise;
+
+        } catch (error) {
+            console.error("Live setup error:", error);
+            setIsConnecting(false);
+            alert("Could not start audio session. Please check microphone permissions.");
+        }
+    };
+
+    const handleSendText = async () => {
+        if (!input.trim() || isTyping) return;
+        const text = input.trim();
+        setInput('');
+        
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'user', text, timestamp: Date.now() }]);
+        setIsTyping(true);
+
+        try {
+            const result = await sendChatMessage(messages, text, 'gemini-2.5-flash');
+            setMessages(prev => [...prev, { 
+                id: (Date.now() + 1).toString(), 
+                role: 'model', 
+                text: result.text, 
+                timestamp: Date.now() 
+            }]);
+        } catch (e) {
+            setMessages(prev => [...prev, { id: Date.now().toString(), role: 'model', text: "Connection error.", timestamp: Date.now() }]);
+        } finally {
+            setIsTyping(false);
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
-            handleSend();
+            handleSendText();
         }
     };
 
     return (
-        <div className="w-full h-full flex flex-col bg-slate-950">
-            {/* App Bar / Header */}
-            <header className="shrink-0 flex items-center justify-between p-3 md:p-4 bg-slate-900/90 backdrop-blur-md border-b border-white/5 z-30 shadow-sm">
+        <div className="w-full h-full flex flex-col bg-slate-950 relative overflow-hidden">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10 pointer-events-none" 
+                 style={{ 
+                     backgroundImage: 'radial-gradient(circle at 2px 2px, rgba(56,189,248,0.4) 1px, transparent 0)', 
+                     backgroundSize: '24px 24px' 
+                 }}>
+            </div>
+
+            {/* Header */}
+            <header className="shrink-0 h-16 border-b border-white/5 bg-slate-900/80 backdrop-blur flex items-center justify-between px-4 z-20">
                 <div className="flex items-center gap-3">
                     <Avatar role="model" />
                     <div>
-                        <h1 className="text-sm md:text-lg font-bold text-white leading-tight">Lakshya Assistant</h1>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span className="text-[10px] md:text-xs text-slate-400">Online</span>
+                        <h2 className="text-white font-bold text-sm">Lakshya Voice Agent</h2>
+                        <div className="flex items-center gap-2">
+                             <div className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-emerald-500'}`}></div>
+                             <span className="text-xs text-slate-400">{isLive ? 'Live On Air' : 'Ready'}</span>
                         </div>
                     </div>
                 </div>
-
-                {/* Model Selector - Compact */}
-                <div className="bg-slate-800 p-0.5 rounded-lg border border-white/10 flex gap-0.5 overflow-x-auto scrollbar-none max-w-[200px] md:max-w-none">
-                    {MODELS.map((m) => (
-                        <button
-                            key={m.id}
-                            onClick={() => setSelectedModel(m.id)}
-                            className={`p-1.5 md:p-2 md:px-3 rounded flex items-center gap-2 transition-all shrink-0 ${
-                                selectedModel === m.id 
-                                ? 'bg-sky-600 text-white shadow-sm' 
-                                : 'text-slate-400 hover:text-white hover:bg-white/5'
-                            }`}
-                            title={m.desc}
-                        >
-                            {m.icon}
-                            {/* Make name visible if selected on mobile, always visible on desktop */}
-                            <span className={`text-[10px] md:text-xs font-bold ${selectedModel === m.id ? 'inline' : 'hidden md:inline'}`}>{m.label}</span>
-                        </button>
-                    ))}
+                
+                {/* Language Selector */}
+                <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 hidden md:inline">Voice Language:</span>
+                    <select 
+                        value={selectedLanguage}
+                        onChange={(e) => {
+                            if (isLive) {
+                                alert("Please stop the current live session to change language.");
+                                return;
+                            }
+                            setSelectedLanguage(e.target.value);
+                        }}
+                        disabled={isLive}
+                        className="bg-slate-800 text-xs text-slate-200 border border-slate-700 rounded-lg py-1 px-2 focus:ring-1 focus:ring-sky-500 outline-none"
+                    >
+                        {LANGUAGES.map(l => (
+                            <option key={l.id} value={l.id}>{l.label}</option>
+                        ))}
+                    </select>
                 </div>
             </header>
 
-            {/* Main Chat Area */}
-            <div className="flex-1 relative flex flex-col overflow-hidden bg-slate-950">
-                {/* 
-                   Unique Layered Wallpaper 
-                   Combines 3 different patterns at different sizes and positions to create a non-repeating look.
-                */}
-                <div 
-                    className="absolute inset-0 pointer-events-none"
-                    style={{
-                        backgroundImage: `url("${PATTERN_DOTS}"), url("${PATTERN_CIRCUIT}"), url("${PATTERN_HEX}")`,
-                        backgroundSize: '24px 24px, 120px 120px, 100px 100px',
-                        backgroundPosition: '0 0, 0 0, 50px 50px',
-                        backgroundRepeat: 'repeat',
-                        opacity: 0.8
-                    }}
-                ></div>
+            {/* Main Area */}
+            <div className="flex-1 relative flex flex-col items-center justify-center p-4">
+                
+                {isLive ? (
+                    // --- LIVE VISUALIZER ---
+                    <div className="flex flex-col items-center animate-fade-in-up">
+                         <div className="relative w-48 h-48 md:w-64 md:h-64 flex items-center justify-center mb-8">
+                             {/* Pulsing Rings */}
+                             <div className="absolute inset-0 rounded-full border-2 border-sky-500/20 animate-ping-slow" style={{ animationDuration: '3s' }}></div>
+                             <div className="absolute inset-4 rounded-full border border-sky-400/10 animate-spin-slow" style={{ animationDuration: '10s' }}></div>
+                             <div className="absolute inset-[-20px] rounded-full border border-indigo-500/10 animate-spin-slow" style={{ animationDirection: 'reverse', animationDuration: '7s' }}></div>
 
-                {/* Messages List */}
-                <div 
-                    ref={scrollRef} 
-                    className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar scroll-smooth relative z-10 pb-4"
-                >
-                    {/* Welcome Spacer */}
-                    <div className="h-4"></div>
+                             {/* Dynamic Core */}
+                             <div 
+                                className="w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-sky-500 to-indigo-600 rounded-full shadow-[0_0_60px_rgba(14,165,233,0.5)] flex items-center justify-center transition-transform duration-75 ease-linear"
+                                style={{ transform: `scale(${1 + liveVolume * 0.4})` }}
+                             >
+                                 <svg className="w-16 h-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                 </svg>
+                             </div>
+                         </div>
+                         <h3 className="text-2xl font-bold text-white mb-2 tracking-tight">Listening...</h3>
+                         <p className="text-slate-400 text-sm">Speak naturally in {selectedLanguage}</p>
+                         
+                         <button 
+                            onClick={stopLiveSession}
+                            className="mt-8 px-8 py-3 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-full font-bold transition-all hover:scale-105 flex items-center gap-2"
+                         >
+                            <div className="w-3 h-3 bg-red-500 rounded-sm"></div>
+                            End Live Session
+                         </button>
+                    </div>
+                ) : (
+                    // --- TEXT CHAT VIEW ---
+                    <div className="w-full h-full flex flex-col max-w-3xl">
+                        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-6 scrollbar-thin scrollbar-thumb-slate-800" ref={scrollRef}>
+                            {messages.map((msg) => (
+                                <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''} animate-fade-in-up`}>
+                                    <Avatar role={msg.role} />
+                                    <div className={`max-w-[80%] rounded-2xl p-4 ${msg.role === 'user' ? 'bg-sky-600 text-white rounded-tr-sm' : 'bg-slate-800 text-slate-200 border border-white/5 rounded-tl-sm'}`}>
+                                        <p className="whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            {isTyping && (
+                                <div className="flex gap-4 animate-fade-in-up">
+                                    <Avatar role="model" />
+                                    <div className="bg-slate-800 rounded-2xl p-4 border border-white/5 flex gap-1 items-center">
+                                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce"></div>
+                                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                        <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
 
-                    {messages.map((msg) => (
-                        <div 
-                            key={msg.id} 
-                            className={`flex w-full gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+            {/* Controls */}
+            {!isLive && (
+                <div className="shrink-0 p-4 bg-slate-900/50 backdrop-blur-md border-t border-white/5 z-20">
+                    <div className="max-w-3xl mx-auto flex gap-3 items-end">
+                        <button 
+                            onClick={startLiveSession}
+                            disabled={isConnecting}
+                            className="shrink-0 h-12 w-12 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20 hover:scale-105 transition-transform disabled:opacity-50 disabled:scale-100 group relative"
+                            title="Start Live Voice"
                         >
-                            {/* Avatar only for Model to save space/Telegram style usually doesn't show own avatar, but we keep consistent UX */}
-                            {msg.role === 'model' && <Avatar role="model" className="mt-auto mb-1" />}
-                            
-                            <div className={`max-w-[85%] md:max-w-[70%] min-w-[60px] relative group`}>
-                                <div className={`p-3 md:p-4 rounded-2xl text-sm md:text-base leading-relaxed whitespace-pre-wrap shadow-sm overflow-hidden ${
-                                    msg.role === 'user' 
-                                        ? 'bg-sky-600 text-white rounded-br-none shadow-sky-900/10' 
-                                        : 'bg-slate-800 text-slate-200 rounded-bl-none shadow-black/30'
-                                }`}>
-                                    {msg.text}
-                                    
-                                    {/* Render Images if present */}
-                                    {msg.images && msg.images.length > 0 && (
-                                        <div className="mt-3 space-y-2">
-                                            {msg.images.map((imgSrc, idx) => (
-                                                <img 
-                                                    key={idx} 
-                                                    src={imgSrc} 
-                                                    alt="Generated" 
-                                                    className="w-full h-auto rounded-lg border border-white/10 shadow-lg"
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                                <div className={`text-[10px] mt-1 opacity-60 flex gap-1 ${msg.role === 'user' ? 'justify-end text-sky-200' : 'justify-start text-slate-500 ml-1'}`}>
-                                   <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                   {msg.role === 'user' && <span>✓✓</span>}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    
-                    {/* Animated Typing Indicator */}
-                    {isTyping && (
-                        <div className="flex w-full gap-3 animate-fade-in-up">
-                            <Avatar role="model" className="mt-auto mb-1" />
-                            <div className="bg-slate-800 text-slate-400 px-4 py-3 rounded-2xl rounded-bl-none flex items-center gap-2 shadow-sm">
-                                <div className="flex gap-1 h-2 items-center">
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-100"></span>
-                                    <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce delay-200"></span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </div>
+                            {isConnecting ? (
+                                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            ) : (
+                                <>
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                    <div className="absolute -top-10 left-1/2 -translate-x-1/2 px-2 py-1 bg-sky-600 text-white text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                                        Start Voice
+                                    </div>
+                                </>
+                            )}
+                        </button>
 
-            {/* Input Area - Fixed Bottom for Full Screen Feel */}
-            {/* Added pb-5 specifically for mobile to clear bottom nav */}
-            <div className="shrink-0 p-3 md:p-4 bg-slate-900 border-t border-white/5 relative z-20 pb-5 md:pb-safe">
-                <div className="max-w-4xl mx-auto flex gap-2 items-end">
-                     <div className="flex-1 bg-black/40 border border-slate-700 focus-within:border-sky-500 rounded-2xl flex items-center min-h-[50px] transition-colors focus-within:bg-black/60">
-                        <Textarea 
-                            value={input}
-                            onChange={e => setInput(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Message..."
-                            className="!bg-transparent !border-none !shadow-none focus:!ring-0 resize-none min-h-[50px] max-h-[120px] py-3 px-4 text-sm md:text-base leading-relaxed text-slate-100 placeholder:text-slate-500"
-                        />
-                     </div>
-                     <Button 
-                        onClick={handleSend} 
-                        disabled={!input.trim() || isTyping || isSending}
-                        className={`w-12 h-12 p-0 rounded-full shrink-0 bg-sky-500 hover:bg-sky-400 flex items-center justify-center shadow-lg transition-all duration-300 overflow-hidden ${isSending ? 'scale-90 bg-emerald-500' : 'scale-100'}`}
-                    >
-                         {/* Neon Particles on Send */}
-                        {isSending && particles.map((p, i) => {
-                            const tx = Math.cos(p.angle * Math.PI / 180) * p.dist;
-                            const ty = Math.sin(p.angle * Math.PI / 180) * p.dist;
-                            return (
-                                <div 
-                                    key={i}
-                                    className="absolute left-1/2 top-1/2 bg-white rounded-full animate-particle-out pointer-events-none"
-                                    style={{
-                                        width: p.size,
-                                        height: p.size,
-                                        '--tx': `${tx}px`,
-                                        '--ty': `${ty}px`
-                                    } as React.CSSProperties}
-                                />
-                            );
-                        })}
-                        
-                        <div className={`transition-all duration-700 ease-in-out transform ${isSending ? 'translate-x-32 -translate-y-32 rotate-12 opacity-0' : 'translate-0 rotate-0 opacity-100'}`}>
-                            {/* Paper Plane Icon */}
-                            <svg className="w-5 h-5 text-white ml-0.5" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
-                            </svg>
+                        <div className="flex-1 relative">
+                            <Textarea 
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Type a message..."
+                                className="!bg-slate-800 !border-slate-700 !rounded-2xl !py-3 !pr-12 min-h-[48px] max-h-[120px] resize-none"
+                            />
+                            <button 
+                                onClick={handleSendText}
+                                disabled={!input.trim() || isTyping}
+                                className="absolute right-2 bottom-2 p-2 text-sky-500 hover:text-sky-400 disabled:opacity-50 transition-colors"
+                            >
+                                <svg className="w-5 h-5 transform rotate-90" fill="currentColor" viewBox="0 0 20 20"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                            </button>
                         </div>
-                    </Button>
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
