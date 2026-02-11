@@ -217,8 +217,9 @@ const ChatInterface: React.FC = () => {
 
             const langConfig = LANGUAGES.find(l => l.id === selectedLanguage) || LANGUAGES[0];
             
+            // Updated to latest model with search support
             const sessionPromise = ai.live.connect({
-                model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+                model: 'gemini-2.5-flash-native-audio-preview-12-2025',
                 callbacks: {
                     onopen: () => {
                         setIsLive(true);
@@ -254,7 +255,8 @@ const ChatInterface: React.FC = () => {
                     speechConfig: {
                         voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } }
                     },
-                    systemInstruction: langConfig.prompt
+                    systemInstruction: langConfig.prompt,
+                    tools: [{ googleSearch: {} }] // Enabled Live Search Grounding
                 }
             });
 
@@ -367,9 +369,16 @@ const ChatInterface: React.FC = () => {
                          </div>
                          
                          <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-sky-400 mb-2 tracking-tight">LISTENING MODE ACTIVE</h3>
-                         <div className="flex items-center gap-2 mb-8">
-                            <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                            <p className="text-sky-300/60 font-mono text-sm uppercase tracking-widest">Channel: {selectedLanguage}</p>
+                         <div className="flex flex-col items-center gap-2 mb-8">
+                            <div className="flex items-center gap-2">
+                                <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                <p className="text-sky-300/60 font-mono text-sm uppercase tracking-widest">Channel: {selectedLanguage}</p>
+                            </div>
+                            {/* Live Search Badge */}
+                            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20">
+                                <svg className="w-3 h-3 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                <span className="text-[10px] font-bold text-blue-300 uppercase tracking-wider">Google Search Enabled</span>
+                            </div>
                          </div>
                          
                          <button 
