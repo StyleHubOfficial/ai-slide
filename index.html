@@ -15,14 +15,14 @@
         height: 6px;
       }
       ::-webkit-scrollbar-track {
-        background: #0f172a; 
+        background: rgba(15, 23, 42, 0.5); 
       }
       ::-webkit-scrollbar-thumb {
-        background: #334155; 
+        background: rgba(56, 189, 248, 0.3); 
         border-radius: 3px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #475569; 
+        background: rgba(56, 189, 248, 0.6); 
       }
 
       /* --- CINEMATIC ANIMATIONS --- */
@@ -249,6 +249,30 @@
       }
       .animate-robot-bounce {
         animation: robot-bounce 0.4s ease-in-out infinite;
+      }
+
+      /* NEW: Floating Bubble Particles */
+      @keyframes float-up {
+        0% { transform: translateY(120vh) scale(0); opacity: 0; }
+        10% { opacity: 0.3; }
+        90% { opacity: 0.3; }
+        100% { transform: translateY(-20vh) scale(1.5); opacity: 0; }
+      }
+      .particle {
+        position: absolute;
+        background: radial-gradient(circle at 30% 30%, rgba(56,189,248,0.4), rgba(0,0,0,0));
+        border-radius: 50%;
+        animation: float-up linear infinite;
+        pointer-events: none;
+        z-index: 0;
+        filter: blur(2px);
+      }
+
+      /* NEW: Grid Background */
+      .bg-grid-pattern {
+        background-image: linear-gradient(rgba(56, 189, 248, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56, 189, 248, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
       }
 
       /* Chalk Effect Utility */
