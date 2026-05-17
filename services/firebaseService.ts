@@ -10,11 +10,6 @@ export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const storage = getStorage(app);
 export const auth = getAuth(app);
 
-import { signInAnonymously } from 'firebase/auth';
-
-// Authenticate anonymously so we can upload files to storage if rules require auth
-signInAnonymously(auth).catch(console.error);
-
 export interface ContentItem {
     id?: string;
     section: string; // 'paras', 'ankit', 'dinesh', 'imtiyaz'
@@ -26,14 +21,15 @@ export interface ContentItem {
     uploader: string;
 }
 
-export const uploadFileToStorage = async (file: File, path: string): Promise<string> => {
+export const uploadFileToStorage = async (file: File, path: string, onProgress?: (progress: number) => void): Promise<string> => {
     return new Promise((resolve, reject) => {
         const storageRef = ref(storage, path);
         const uploadTask = uploadBytesResumable(storageRef, file);
 
         uploadTask.on('state_changed', 
             (snapshot) => {
-                // progressive upload could be handled here
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                if (onProgress) onProgress(progress);
             }, 
             (error) => {
                 console.error("Storage upload error:", error);

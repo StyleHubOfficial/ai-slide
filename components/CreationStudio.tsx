@@ -61,6 +61,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [uploading, setUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showFirebaseUploadModal, setShowFirebaseUploadModal] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [internalLoading, setInternalLoading] = useState(false);
   const [activeCommunityTab, setActiveCommunityTab] = useState('my-saved');
   const [expandedContent, setExpandedContent] = useState<ContentItem | null>(null);
@@ -458,7 +459,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                             </div>
                         </div>
                     ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 md:pb-6 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-40 md:pb-6 overflow-y-auto custom-scrollbar flex-1">
                         {isCustomSection && authMode !== 'guest' && (
                              <GlassCard onClick={handleCloudUpload} className="p-0 overflow-hidden flex flex-col items-center justify-center border-dashed border-sky-500/50 hover:bg-sky-500/5 cursor-pointer min-h-[200px]">
                                  <UploadIcon className="w-8 h-8 text-sky-500 mb-2" />
@@ -594,7 +595,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                     {/* CUSTOM CLOUD UPLOAD MODAL */}
                     {showFirebaseUploadModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                            <GlassCard className="max-w-md w-full p-6 border-sky-500/30 relative">
+                            <GlassCard className="max-w-md w-full max-h-[90vh] overflow-y-auto custom-scrollbar p-6 border-sky-500/30 relative">
                                 <div className="flex justify-between items-center mb-6">
                                     <h3 className="text-xl font-bold text-white">Upload to {activeCommunityTab}</h3>
                                     <button onClick={() => setShowFirebaseUploadModal(false)}><XIcon className="w-6 h-6"/></button>
@@ -610,15 +611,17 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     const file = (fd.get('fileInput') as File);
                                     
                                     setInternalLoading(true);
+                                    setUploadProgress(0);
                                     
                                     try {
                                         if (file && file.size > 0) {
                                             const path = `community/${Date.now()}_${file.name}`;
-                                            data = await uploadFileToStorage(file, path);
+                                            data = await uploadFileToStorage(file, path, setUploadProgress);
                                         }
 
                                         if (!title || !data) {
                                             setInternalLoading(false);
+                                            setUploadProgress(0);
                                             return alert("Title and Content/File are required.");
                                         }
 
@@ -636,6 +639,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                         alert("Upload failed. " + (err instanceof Error ? err.message : String(err)));
                                     } finally {
                                         setInternalLoading(false);
+                                        setUploadProgress(0);
                                     }
                                 }} className="space-y-4">
                                    <div>
@@ -662,7 +666,12 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                        <input type="checkbox" name="isPublic" defaultChecked className="accent-sky-500 w-4 h-4" />
                                        <span className="text-sm text-slate-300">Make Public</span>
                                    </label>
-                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3" disabled={internalLoading}>Upload</Button>
+                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3" disabled={internalLoading}>
+                                       {internalLoading ? 'Uploading...' : 'Upload'}
+                                   </Button>
+                                   {uploadProgress > 0 && <div className="w-full bg-slate-800 rounded-full h-2 mt-2 border border-slate-700 overflow-hidden">
+                                       <div className="bg-sky-500 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
+                                   </div>}
                                 </form>
                             </GlassCard>
                         </div>
@@ -675,7 +684,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const isMobileChat = activeTab === 'CHAT';
 
   return (
-    <div className="h-screen w-screen bg-slate-950 text-slate-200 flex flex-col lg:flex-row overflow-hidden font-sans">
+    <div className="h-[100dvh] w-screen bg-slate-950 text-slate-200 flex flex-col lg:flex-row overflow-hidden font-sans">
       <TourGuide steps={tourSteps} isOpen={runTour} onClose={() => setRunTour(false)} onComplete={handleTourComplete} />
 
       {(isLoading || internalLoading) && (
@@ -730,8 +739,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
       {/* Main Content */}
       <main 
-        className={`${isMobileChat ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden lg:pb-0' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-32 lg:pb-12'}`}
-        style={isMobileChat ? { paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom))' } : {}}
+        className={`${isMobileChat ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden lg:pb-0' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-40 lg:pb-12'}`}
+        style={isMobileChat ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' } : {}}
       >
          {/* Mobile Header - Hide only for Chat to give full screen feel */}
          {activeTab !== 'CHAT' && (
