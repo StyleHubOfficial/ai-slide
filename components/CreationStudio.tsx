@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { PresentationStyle, SharedPresentation, Presentation } from '../types';
 import { communityService } from '../services/communityService';
 import { generatePresentation } from '../services/geminiService';
+import { uploadContent, subscribeToContent, toggleVisibility, deleteContent, ContentItem } from '../services/firebaseService';
 import GlassCard from './ui/GlassCard';
 import Button from './ui/Button';
 import Label from './ui/Label';
@@ -59,8 +60,15 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [userHistory, setUserHistory] = useState<Presentation[]>([]);
   const [uploading, setUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showFirebaseUploadModal, setShowFirebaseUploadModal] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
   const [activeCommunityTab, setActiveCommunityTab] = useState('my-saved');
+
+  // Cloud Content State
+  const [cloudContent, setCloudContent] = useState<ContentItem[]>([]);
+  const [authMode, setAuthMode] = useState<'guest'|'user'|'admin'>(() => {
+      return (localStorage.getItem('lakshya_auth') as any) || 'guest';
+  });
 
   // Tour State
   const [runTour, setRunTour] = useState(false);
@@ -80,7 +88,13 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
         setTimeout(() => handleStartTour(), 1000);
     }
 
-    return () => window.removeEventListener('storage', handleStorageChange);
+    // Read from Firebase
+    const unsubscribe = subscribeToContent(null, (data) => setCloudContent(data));
+
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        unsubscribe();
+    };
   }, []);
 
   const refreshData = () => {
@@ -127,6 +141,37 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       setRunTour(false);
       localStorage.setItem('lakshya_has_seen_tour', 'true');
   };
+
+  const handleLogin = () => {
+      if (authMode !== 'guest') {
+          if (confirm("Log out?")) {
+              setAuthMode('guest');
+              localStorage.setItem('lakshya_auth', 'guest');
+          }
+          return;
+      }
+      const code = prompt("Enter Access Code:");
+      if (code === 'ss123') {
+          setAuthMode('admin');
+          localStorage.setItem('lakshya_auth', 'admin');
+          alert('Logged in as Admin');
+      } else if (code === 'passcode') {
+          setAuthMode('user');
+          localStorage.setItem('lakshya_auth', 'user');
+          alert('Logged in as User');
+      } else if (code !== null) {
+          alert("Invalid Access Code");
+      }
+  };
+
+  const handleCloudUpload = async () => {
+      if (authMode === 'guest') {
+          handleLogin();
+          return;
+      }
+      setShowFirebaseUploadModal(true);
+  };
+
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -350,6 +395,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                 { id: 'ankit', label: 'Ankit Bugaliya' },
                 { id: 'imtiyaz', label: 'Imtiyaz Kilaniya' },
                 { id: 'dinesh', label: 'Dinesh Pawaria' },
+                ...(authMode === 'admin' ? [{ id: 'settings', label: 'Settings' }] : [])
             ];
 
             const filteredDecks = communityDecks.filter(d => {
@@ -360,12 +406,14 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                 if (activeCommunityTab === 'dinesh') return d.sharedBy.toLowerCase().includes('dinesh');
                 return true;
             });
+            const isCustomSection = ['paras', 'ankit', 'imtiyaz', 'dinesh'].includes(activeCommunityTab);
+            const filteredCloudContent = cloudContent.filter(c => c.section === activeCommunityTab && (c.isPublic || authMode === 'admin' || authMode === 'user'));
 
             return (
                 <div className="w-full max-w-5xl animate-fade-in-up flex flex-col h-full">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h1 className="text-3xl font-bold text-white shrink-0">Community Hub</h1>
-                        <button onClick={() => setShowUploadModal(true)} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20 shrink-0"><UploadIcon className="w-4 h-4"/> Share Notes</button>
+                        <button onClick={() => authMode !== 'guest' ? setShowUploadModal(true) : handleLogin()} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20 shrink-0"><UploadIcon className="w-4 h-4"/> Upload Content</button>
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto pb-4 mb-4 custom-scrollbar shrink-0 w-full no-scrollbar">
@@ -380,8 +428,57 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                         ))}
                     </div>
 
+                    {activeCommunityTab === 'settings' && authMode === 'admin' ? (
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-xl font-bold text-white">Content Settings</h2>
+                                <button onClick={() => { setAuthMode('guest'); localStorage.setItem('lakshya_auth', 'guest'); }} className="px-4 py-2 bg-red-600/20 hover:bg-red-600/40 text-red-500 rounded font-bold transition-all">Exit All Access</button>
+                            </div>
+                            <div className="bg-slate-900 overflow-hidden border border-slate-700 rounded-xl">
+                                {cloudContent.map(c => (
+                                    <div key={c.id} className="flex justify-between items-center p-4 border-b border-white/5 hover:bg-white/5 transition-colors">
+                                        <div>
+                                            <p className="font-bold text-slate-200">{c.title}</p>
+                                            <p className="text-xs text-slate-500">Section: {c.section} | Type: {c.type}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <label className="flex items-center gap-2 cursor-pointer bg-slate-800 px-3 py-1 rounded">
+                                                <input type="checkbox" checked={c.isPublic} onChange={() => c.id && toggleVisibility(c.id, !c.isPublic)} className="accent-sky-500" />
+                                                <span className="text-xs font-bold text-slate-400">Public</span>
+                                            </label>
+                                            <button onClick={() => c.id && confirm("Delete Content?") && deleteContent(c.id)} className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 rounded"><XIcon className="w-4 h-4"/></button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 md:pb-6 overflow-y-auto custom-scrollbar flex-1">
-                        {filteredDecks.length === 0 ? (
+                        {isCustomSection && authMode !== 'guest' && (
+                             <GlassCard onClick={handleCloudUpload} className="p-0 overflow-hidden flex flex-col items-center justify-center border-dashed border-sky-500/50 hover:bg-sky-500/5 cursor-pointer min-h-[200px]">
+                                 <UploadIcon className="w-8 h-8 text-sky-500 mb-2" />
+                                 <p className="font-bold text-sky-400">Upload to {communityTabs.find(t=>t.id===activeCommunityTab)?.label}</p>
+                             </GlassCard>
+                        )}
+                        
+                        {filteredCloudContent.map(c => (
+                             <GlassCard key={c.id} className="p-4 flex flex-col justify-between">
+                                  <div>
+                                       {c.type === 'image' && <img src={c.data} alt="content" className="w-full h-32 object-cover rounded mb-2 bg-slate-900 border border-slate-700"/>}
+                                       {c.type === 'video' && <video src={c.data} controls className="w-full h-32 object-cover rounded mb-2 bg-slate-900 border border-slate-700"/>}
+                                       {c.type === 'pdf' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 flex items-center justify-center"><a href={c.data} target="_blank" rel="noreferrer" className="text-sky-400 font-bold hover:underline py-2 px-4 rounded border border-sky-500/30">View PDF</a></div>}
+                                       {c.type === 'text' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 p-2 overflow-y-auto text-xs text-slate-300"><pre className="whitespace-pre-wrap font-sans">{c.data}</pre></div>}
+                                       <h3 className="font-bold text-white text-lg truncate" title={c.title}>{c.title}</h3>
+                                       <p className="text-xs text-slate-400">Section: {c.section}</p>
+                                  </div>
+                                  <div className="flex justify-between items-center mt-4 border-t border-slate-700 pt-3">
+                                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${c.isPublic?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-500'}`}>{c.isPublic ? 'Public' : 'Private'}</span>
+                                       {authMode === 'admin' && <button onClick={() => c.id && confirm("Delete Content?") && deleteContent(c.id)} className="text-slate-500 hover:text-red-500"><XIcon className="w-3 h-3"/></button>}
+                                  </div>
+                             </GlassCard>
+                        ))}
+
+                        {filteredDecks.length === 0 && filteredCloudContent.length === 0 && (!isCustomSection || authMode === 'guest') ? (
                             <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-500 bg-slate-900/30 rounded-2xl border border-dashed border-slate-700/50">
                                 <CommunityIcon className="w-12 h-12 mb-4 opacity-50" />
                                 <p>No notes found in this section.</p>
@@ -413,6 +510,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                             ))
                         )}
                     </div>
+                    )}
                      {/* UPLOAD MODAL */}
                      {showUploadModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -452,6 +550,80 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                             </GlassCard>
                         </div>
                     )}
+                    
+                    {/* CUSTOM CLOUD UPLOAD MODAL */}
+                    {showFirebaseUploadModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                            <GlassCard className="max-w-md w-full p-6 border-sky-500/30 relative">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-bold text-white">Upload to {activeCommunityTab}</h3>
+                                    <button onClick={() => setShowFirebaseUploadModal(false)}><XIcon className="w-6 h-6"/></button>
+                                </div>
+                                <form onSubmit={async (e) => {
+                                    e.preventDefault();
+                                    const fd = new FormData(e.currentTarget);
+                                    const title = fd.get('title') as string;
+                                    const type = fd.get('type') as string;
+                                    const isPublic = fd.get('isPublic') === 'on';
+                                    let data = fd.get('dataUrl') as string;
+                                    
+                                    const file = (fd.get('fileInput') as File);
+                                    if (file && file.size > 0) {
+                                        data = await new Promise<string>((resolve) => {
+                                            const reader = new FileReader();
+                                            reader.onload = (e) => resolve(e.target?.result as string);
+                                            reader.readAsDataURL(file);
+                                        });
+                                    }
+
+                                    if (!title || !data) return alert("Title and Content/File are required.");
+                                    
+                                    setInternalLoading(true);
+                                    try {
+                                        await uploadContent({
+                                            title,
+                                            type,
+                                            data,
+                                            isPublic,
+                                            section: activeCommunityTab,
+                                            createdAt: Date.now(),
+                                            uploader: authMode
+                                        });
+                                        setShowFirebaseUploadModal(false);
+                                    } catch (err) {
+                                        alert("Upload failed. If file is large, prefer providing a URL instead.");
+                                    } finally {
+                                        setInternalLoading(false);
+                                    }
+                                }} className="space-y-4">
+                                   <div>
+                                       <Label>Title</Label>
+                                       <input name="title" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" placeholder="Content title..." />
+                                   </div>
+                                   <div>
+                                       <Label>Content Type</Label>
+                                       <Select name="type" className="w-full bg-slate-900">
+                                           <option value="image">Image</option>
+                                           <option value="video">Video</option>
+                                           <option value="pdf">PDF</option>
+                                           <option value="text">Text / Link</option>
+                                       </Select>
+                                   </div>
+                                   <div className="flex flex-col gap-2 p-3 rounded-lg border border-slate-700 bg-slate-900/50">
+                                       <Label>Source (File OR URL/Text)</Label>
+                                       <input type="file" name="fileInput" className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-500/10 file:text-sky-400 hover:file:bg-sky-500/20" />
+                                       <Textarea name="dataUrl" placeholder="Or paste link/text here..." className="h-20 bg-black/20" />
+                                       <p className="text-[10px] text-slate-500">Note: Files over 1MB should be provided as links.</p>
+                                   </div>
+                                   <label className="flex items-center gap-3 py-2 cursor-pointer">
+                                       <input type="checkbox" name="isPublic" defaultChecked className="accent-sky-500 w-4 h-4" />
+                                       <span className="text-sm text-slate-300">Make Public</span>
+                                   </label>
+                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3" disabled={internalLoading}>Upload</Button>
+                                </form>
+                            </GlassCard>
+                        </div>
+                    )}
                 </div>
             );
     }
@@ -474,9 +646,16 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       
       {/* Sidebar (Desktop) */}
       <aside className="hidden lg:flex w-64 h-full border-r border-white/5 bg-slate-900/50 backdrop-blur-xl flex-col py-8 z-10 shrink-0">
-         <div className="px-6 mb-12 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shrink-0"><span className="text-white font-black text-xl">L</span></div>
-            <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
+         <div className="px-6 mb-12 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shrink-0"><span className="text-white font-black text-xl">L</span></div>
+                <span className="font-black text-lg text-white">Lakshya Studio</span>
+            </div>
+         </div>
+         <div className="px-6 mb-6">
+             <button onClick={handleLogin} className="w-full text-xs font-bold px-3 py-2 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors uppercase">
+                {authMode === 'guest' ? 'LOGIN' : authMode === 'admin' ? 'ADMIN LOGOUT' : 'LOGOUT'}
+             </button>
          </div>
          <nav className="flex-col px-4 space-y-2 flex flex-1">
             <button id="nav-home-desk" onClick={() => setActiveTab('HOME')} className={`flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${activeTab === 'HOME' ? 'bg-sky-500/10 text-sky-400' : 'text-slate-400 hover:text-white'}`}>
@@ -513,9 +692,11 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       >
          {/* Mobile Header - Hide only for Chat to give full screen feel */}
          {activeTab !== 'CHAT' && (
-             <div className="lg:hidden w-full flex justify-between mb-6">
-                 <span className="font-black text-lg text-white animate-text-shimmer">Lakshya Studio</span>
-                 <span className="text-xs font-bold text-sky-500">BETA</span>
+             <div className="lg:hidden w-full flex justify-between items-center mb-6">
+                 <span className="font-black text-lg text-white">Lakshya Studio</span>
+                 <button onClick={handleLogin} className="text-xs font-bold px-3 py-1.5 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors uppercase">
+                     {authMode === 'guest' ? 'LOGIN' : authMode === 'admin' ? 'ADMIN LOGOUT' : 'LOGOUT'}
+                 </button>
              </div>
          )}
          {renderContent()}
