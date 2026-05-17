@@ -10,6 +10,13 @@
     
     <style>
       /* Custom Scrollbar */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
       ::-webkit-scrollbar {
         width: 6px;
         height: 6px;
@@ -362,6 +369,7 @@
   }
 }
 </script>
+<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-slate-950 text-slate-200 antialiased overflow-hidden selection:bg-sky-500/30">
     <div id="root" class="h-screen w-screen"></div>

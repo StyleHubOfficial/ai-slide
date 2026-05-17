@@ -59,6 +59,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [uploading, setUploading] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
+  const [activeCommunityTab, setActiveCommunityTab] = useState('my-saved');
 
   // Tour State
   const [runTour, setRunTour] = useState(false);
@@ -220,7 +221,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   };
 
   const ThemeSelector = () => (
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           {THEMES.map(theme => (
               <button
                   key={theme.id}
@@ -332,38 +333,74 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
             );
 
         case 'COMMUNITY':
+            const communityTabs = [
+                { id: 'my-saved', label: 'My Saved' },
+                { id: 'paras', label: 'Paras Jangir' },
+                { id: 'ankit', label: 'Ankit Bugaliya' },
+                { id: 'imtiyaz', label: 'Imtiyaz Kilaniya' },
+                { id: 'dinesh', label: 'Dinesh Pawaria' },
+            ];
+
+            const filteredDecks = communityDecks.filter(d => {
+                if (activeCommunityTab === 'my-saved') return d.sharedBy.includes('You');
+                if (activeCommunityTab === 'paras') return d.sharedBy.toLowerCase().includes('paras');
+                if (activeCommunityTab === 'ankit') return d.sharedBy.toLowerCase().includes('ankit');
+                if (activeCommunityTab === 'imtiyaz') return d.sharedBy.toLowerCase().includes('imtiyaz');
+                if (activeCommunityTab === 'dinesh') return d.sharedBy.toLowerCase().includes('dinesh');
+                return true;
+            });
+
             return (
-                <div className="w-full max-w-5xl animate-fade-in-up">
-                    <div className="flex justify-between items-center mb-8">
-                        <h1 className="text-3xl font-bold text-white">Study Group Hub</h1>
-                        <button onClick={() => setShowUploadModal(true)} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20"><UploadIcon className="w-4 h-4"/> Share Notes</button>
+                <div className="w-full max-w-5xl animate-fade-in-up flex flex-col h-full">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                        <h1 className="text-3xl font-bold text-white shrink-0">Community Hub</h1>
+                        <button onClick={() => setShowUploadModal(true)} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20 shrink-0"><UploadIcon className="w-4 h-4"/> Share Notes</button>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {communityDecks.map((deck) => (
-                            <GlassCard key={deck.id} className="p-0 overflow-hidden group hover:border-sky-500/50 relative">
-                                <div className={`h-36 w-full ${deck.style === PresentationStyle.Whiteboard ? 'bg-slate-200' : 'bg-slate-800'} relative`}>
-                                    <div className="absolute inset-0 flex items-center justify-center opacity-30">
-                                         {/* Simple Preview Pattern */}
-                                         <div className="w-full h-full bg-slate-900 opacity-20"></div>
-                                    </div>
-                                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
-                                    <div className="absolute bottom-3 left-4 right-4 z-10">
-                                        <h3 className={`font-bold truncate text-white text-lg`}>{deck.title}</h3>
-                                        <p className="text-xs text-slate-300">by {deck.sharedBy}</p>
-                                    </div>
-                                    <button onClick={(e) => handleDeleteCommunity(e, deck.id)} className="absolute top-2 right-2 p-1.5 bg-black/40 hover:bg-red-500/80 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity z-20"><XIcon className="w-3 h-3"/></button>
-                                </div>
-                                <div className="p-4 bg-slate-900/90 flex gap-2">
-                                     <div className="flex-1 py-2 rounded bg-white/5 flex items-center justify-center gap-1 text-xs font-bold text-slate-300">
-                                        <span className="text-pink-500">♥</span> {deck.likes}
-                                     </div>
-                                     <button onClick={() => onOpenHistory(deck)} className="flex-1 py-2 rounded bg-sky-600/20 hover:bg-sky-600/30 text-xs font-bold text-sky-400 transition-colors">Study</button>
-                                     <button onClick={(e) => handleDownloadDeck(e, deck)} className="py-2 px-3 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 transition-colors" title="Download JSON">
-                                        <DownloadIcon className="w-4 h-4" />
-                                     </button>
-                                </div>
-                            </GlassCard>
+
+                    <div className="flex gap-2 overflow-x-auto pb-4 mb-4 custom-scrollbar shrink-0 w-full no-scrollbar">
+                        {communityTabs.map(tab => (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveCommunityTab(tab.id)}
+                                className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeCommunityTab === tab.id ? 'bg-sky-500 text-white shadow-[0_0_15px_rgba(56,189,248,0.4)]' : 'bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`}
+                            >
+                                {tab.label}
+                            </button>
                         ))}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-24 md:pb-6 overflow-y-auto custom-scrollbar flex-1">
+                        {filteredDecks.length === 0 ? (
+                            <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-500 bg-slate-900/30 rounded-2xl border border-dashed border-slate-700/50">
+                                <CommunityIcon className="w-12 h-12 mb-4 opacity-50" />
+                                <p>No notes found in this section.</p>
+                            </div>
+                        ) : (
+                            filteredDecks.map((deck) => (
+                                <GlassCard key={deck.id} className="p-0 overflow-hidden group hover:shadow-[0_0_20px_rgba(56,189,248,0.15)] hover:border-sky-500/50 relative border-slate-800/80 transition-all">
+                                    <div className={`h-36 w-full flex items-center justify-center ${deck.style === PresentationStyle.Whiteboard ? 'bg-slate-200' : 'bg-slate-900'} relative`}>
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                                            <div className="w-full h-full bg-slate-900 opacity-20"></div>
+                                        </div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 to-transparent"></div>
+                                        <div className="absolute bottom-3 left-4 right-4 z-10 flex flex-col">
+                                            <h3 className={`font-bold truncate text-white text-lg`}>{deck.title}</h3>
+                                            <p className="text-xs text-sky-400/80">by {deck.sharedBy}</p>
+                                        </div>
+                                        <button onClick={(e) => handleDeleteCommunity(e, deck.id)} className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-red-500/80 rounded border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-all z-20"><XIcon className="w-3 h-3"/></button>
+                                    </div>
+                                    <div className="p-4 bg-slate-900/90 flex gap-2">
+                                        <div className="flex-1 py-2 rounded bg-slate-800/50 border border-slate-700/50 flex items-center justify-center gap-1 text-xs font-bold text-slate-300">
+                                            <span className="text-pink-500">♥</span> {deck.likes}
+                                        </div>
+                                        <button onClick={() => onOpenHistory(deck)} className="flex-[2] py-2 rounded bg-sky-600/20 hover:bg-sky-500 text-xs font-bold text-sky-400 hover:text-white transition-all border border-sky-500/30">Study Note</button>
+                                        <button onClick={(e) => handleDownloadDeck(e, deck)} className="py-2 px-3 rounded bg-emerald-600/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 transition-all" title="Download JSON">
+                                            <DownloadIcon className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </GlassCard>
+                            ))
+                        )}
                     </div>
                      {/* UPLOAD MODAL */}
                      {showUploadModal && (
@@ -474,25 +511,25 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       </main>
 
       {/* Mobile Nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-900/95 border-t border-white/10 grid grid-cols-4 items-center z-50 pb-safe">
-         <button id="nav-home-mob" onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center gap-1 ${activeTab === 'HOME' ? 'text-sky-400' : 'text-slate-500'}`}>
-            <HomeIcon className="w-6 h-6"/>
-            <span className="text-[10px] font-bold">Home</span>
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[72px] bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex justify-around items-center z-50 pb-safe px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+         <button id="nav-home-mob" onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all active:scale-95 ${activeTab === 'HOME' ? 'text-sky-400 bg-sky-500/10 shadow-[inset_0_0_10px_rgba(56,189,248,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}>
+            <HomeIcon className={`w-6 h-6 ${activeTab === 'HOME' ? 'drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]' : ''}`}/>
+            <span className="text-[10px] font-bold mt-1">Home</span>
          </button>
          
-         <button id="nav-chat-mob" onClick={() => setActiveTab('CHAT')} className={`flex flex-col items-center gap-1 ${activeTab === 'CHAT' ? 'text-sky-400' : 'text-slate-500'}`}>
-            <RobotIcon className="w-6 h-6"/>
-            <span className="text-[10px] font-bold">Tutor</span>
+         <button id="nav-chat-mob" onClick={() => setActiveTab('CHAT')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all active:scale-95 ${activeTab === 'CHAT' ? 'text-sky-400 bg-sky-500/10 shadow-[inset_0_0_10px_rgba(56,189,248,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}>
+            <RobotIcon className={`w-6 h-6 ${activeTab === 'CHAT' ? 'drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]' : ''}`}/>
+            <span className="text-[10px] font-bold mt-1">Tutor</span>
          </button>
 
-         <button id="nav-create-mob" onClick={() => setActiveTab('CREATE')} className={`flex flex-col items-center gap-1 ${activeTab === 'CREATE' ? 'text-sky-400' : 'text-slate-500'}`}>
-            <CreateIcon className="w-6 h-6"/>
-            <span className="text-[10px] font-bold">Create</span>
+         <button id="nav-create-mob" onClick={() => setActiveTab('CREATE')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all active:scale-95 ${activeTab === 'CREATE' ? 'text-sky-400 bg-sky-500/10 shadow-[inset_0_0_10px_rgba(56,189,248,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}>
+            <CreateIcon className={`w-6 h-6 ${activeTab === 'CREATE' ? 'drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]' : ''}`}/>
+            <span className="text-[10px] font-bold mt-1">Create</span>
          </button>
 
-         <button id="nav-comm-mob" onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center gap-1 ${activeTab === 'COMMUNITY' ? 'text-sky-400' : 'text-slate-500'}`}>
-            <CommunityIcon className="w-6 h-6"/>
-            <span className="text-[10px] font-bold">Groups</span>
+         <button id="nav-comm-mob" onClick={() => setActiveTab('COMMUNITY')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all active:scale-95 ${activeTab === 'COMMUNITY' ? 'text-sky-400 bg-sky-500/10 shadow-[inset_0_0_10px_rgba(56,189,248,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}>
+            <CommunityIcon className={`w-6 h-6 ${activeTab === 'COMMUNITY' ? 'drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]' : ''}`}/>
+            <span className="text-[10px] font-bold mt-1">Community</span>
          </button>
       </div>
     </div>

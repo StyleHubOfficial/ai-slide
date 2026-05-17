@@ -5,50 +5,19 @@ const STORAGE_KEY = 'lumina_community_decks';
 const HISTORY_KEY = 'lumina_user_history';
 
 // Initial Seed Data
-const SEED_DECKS: SharedPresentation[] = [
-  {
-    id: 'seed-1',
-    topic: 'Future of AI',
-    title: 'The Generative Age',
-    author: 'Sarah Connors',
-    style: PresentationStyle.DigitalPad,
-    likes: 124,
-    downloads: 45,
-    sharedBy: 'SarahC',
-    dateShared: new Date(Date.now() - 86400000 * 2).toLocaleDateString(),
-    slides: [] 
-  },
-  {
-    id: 'seed-2',
-    topic: 'Sustainable Energy',
-    title: 'Green Tech Revolution',
-    author: 'EcoLabs',
-    style: PresentationStyle.Whiteboard,
-    likes: 89,
-    downloads: 12,
-    sharedBy: 'GreenGuy',
-    dateShared: new Date(Date.now() - 86400000 * 1).toLocaleDateString(),
-    slides: []
-  },
-  {
-    id: 'seed-3',
-    topic: 'Q4 Strategy',
-    title: 'Q4 Marketing Blitz',
-    author: 'Corp Dynamics',
-    style: PresentationStyle.Blueprint,
-    likes: 256,
-    downloads: 110,
-    sharedBy: 'BizMaster',
-    dateShared: new Date().toLocaleDateString(),
-    slides: []
-  }
-];
+const SEED_DECKS: SharedPresentation[] = [];
 
 export const communityService = {
   // --- Community Hub Methods ---
 
   getDecks: (): SharedPresentation[] => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    let stored = localStorage.getItem(STORAGE_KEY);
+    // Force clear seed data if present
+    if (stored && stored.includes('seed-')) {
+        stored = null;
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
     if (!stored) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_DECKS));
       return SEED_DECKS;
