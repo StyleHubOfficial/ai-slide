@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { PresentationStyle, SharedPresentation, Presentation } from '../types';
 import { communityService } from '../services/communityService';
 import { generatePresentation } from '../services/geminiService';
-import { uploadContent, subscribeToContent, toggleVisibility, deleteContent, uploadFileToStorage, ContentItem } from '../services/firebaseService';
+import { uploadContent, subscribeToContent, toggleVisibility, deleteContent, ContentItem } from '../services/firebaseService';
 import GlassCard from './ui/GlassCard';
 import Button from './ui/Button';
 import Label from './ui/Label';
@@ -459,7 +459,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                             </div>
                         </div>
                     ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-40 md:pb-6 overflow-y-auto custom-scrollbar flex-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-6 overflow-y-auto custom-scrollbar flex-1">
                         {isCustomSection && authMode !== 'guest' && (
                              <GlassCard onClick={handleCloudUpload} className="p-0 overflow-hidden flex flex-col items-center justify-center border-dashed border-sky-500/50 hover:bg-sky-500/5 cursor-pointer min-h-[200px]">
                                  <UploadIcon className="w-8 h-8 text-sky-500 mb-2" />
@@ -610,17 +610,49 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     
                                     const file = (fd.get('fileInput') as File);
                                     
-                                    setInternalLoading(true);
+                                    setUploading(true);
                                     setUploadProgress(0);
                                     
                                     try {
                                         if (file && file.size > 0) {
-                                            const path = `community/${Date.now()}_${file.name}`;
-                                            data = await uploadFileToStorage(file, path, setUploadProgress);
+                                            data = await new Promise<string>((resolve, reject) => {
+                                                const xhr = new XMLHttpRequest();
+                                                xhr.open('POST', '/api/upload', true);
+                                                
+                                                xhr.upload.onprogress = (e) => {
+                                                    if (e.lengthComputable) {
+                                                        const percentComplete = (e.loaded / e.total) * 100;
+                                                        setUploadProgress(percentComplete);
+                                                    }
+                                                };
+                                                
+                                                xhr.onload = () => {
+                                                    if (xhr.status === 200) {
+                                                        const response = JSON.parse(xhr.responseText);
+                                                        resolve(response.url);
+                                                    } else {
+                                                        try {
+                                                            const response = JSON.parse(xhr.responseText);
+                                                            reject(new Error(response.error || "Upload failed"));
+                                                        } catch(e) {
+                                                            reject(new Error("Upload failed"));
+                                                        }
+                                                    }
+                                                };
+                                                
+                                                xhr.onerror = () => {
+                                                    reject(new Error("Network error during upload"));
+                                                };
+                                                
+                                                const formData = new FormData();
+                                                formData.append('file', file);
+                                                formData.append('type', type);
+                                                xhr.send(formData);
+                                            });
                                         }
 
                                         if (!title || !data) {
-                                            setInternalLoading(false);
+                                            setUploading(false);
                                             setUploadProgress(0);
                                             return alert("Title and Content/File are required.");
                                         }
@@ -638,7 +670,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     } catch (err) {
                                         alert("Upload failed. " + (err instanceof Error ? err.message : String(err)));
                                     } finally {
-                                        setInternalLoading(false);
+                                        setUploading(false);
                                         setUploadProgress(0);
                                     }
                                 }} className="space-y-4">
@@ -666,8 +698,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                        <input type="checkbox" name="isPublic" defaultChecked className="accent-sky-500 w-4 h-4" />
                                        <span className="text-sm text-slate-300">Make Public</span>
                                    </label>
-                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3" disabled={internalLoading}>
-                                       {internalLoading ? 'Uploading...' : 'Upload'}
+                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3" disabled={uploading}>
+                                       {uploading ? 'Uploading...' : 'Upload'}
                                    </Button>
                                    {uploadProgress > 0 && <div className="w-full bg-slate-800 rounded-full h-2 mt-2 border border-slate-700 overflow-hidden">
                                        <div className="bg-sky-500 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
@@ -739,12 +771,11 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
       {/* Main Content */}
       <main 
-        className={`${isMobileChat ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden lg:pb-0' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-40 lg:pb-12'}`}
-        style={isMobileChat ? { paddingBottom: 'calc(5rem + env(safe-area-inset-bottom))' } : {}}
+        className={activeTab === 'CHAT' ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden w-full lg:rounded-tl-3xl bg-slate-950' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center'}
       >
          {/* Mobile Header - Hide only for Chat to give full screen feel */}
          {activeTab !== 'CHAT' && (
-             <div className="lg:hidden w-full flex justify-between items-center mb-6">
+             <div className="lg:hidden w-full flex justify-between items-center mb-6 shrink-0">
                  <span className="font-black text-lg text-white">Lakshya Studio</span>
                  <button onClick={handleLogin} className="text-xs font-bold px-3 py-1.5 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors uppercase">
                      {authMode === 'guest' ? 'LOGIN' : authMode === 'admin' ? 'ADMIN LOGOUT' : 'LOGOUT'}
@@ -755,7 +786,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       </main>
 
       {/* Mobile Nav */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 h-[72px] bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex justify-around items-center z-50 pb-safe px-2 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+      <div className="lg:hidden shrink-0 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex justify-around items-center z-50 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
          <button id="nav-home-mob" onClick={() => setActiveTab('HOME')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-xl transition-all active:scale-95 ${activeTab === 'HOME' ? 'text-sky-400 bg-sky-500/10 shadow-[inset_0_0_10px_rgba(56,189,248,0.2)]' : 'text-slate-500 hover:text-slate-300'}`}>
             <HomeIcon className={`w-6 h-6 ${activeTab === 'HOME' ? 'drop-shadow-[0_0_8px_rgba(56,189,248,0.8)]' : ''}`}/>
             <span className="text-[10px] font-bold mt-1">Home</span>

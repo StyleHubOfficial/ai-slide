@@ -1,13 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, onSnapshot, query, where, orderBy } from 'firebase/firestore';
-import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from 'firebase/storage';
 import firebaseConfig from '../firebase-applet-config.json';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-export const storage = getStorage(app);
 export const auth = getAuth(app);
 
 export interface ContentItem {
@@ -20,28 +18,6 @@ export interface ContentItem {
     createdAt: number;
     uploader: string;
 }
-
-export const uploadFileToStorage = async (file: File, path: string, onProgress?: (progress: number) => void): Promise<string> => {
-    return new Promise((resolve, reject) => {
-        const storageRef = ref(storage, path);
-        const uploadTask = uploadBytesResumable(storageRef, file);
-
-        uploadTask.on('state_changed', 
-            (snapshot) => {
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                if (onProgress) onProgress(progress);
-            }, 
-            (error) => {
-                console.error("Storage upload error:", error);
-                reject(error);
-            }, 
-            async () => {
-                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                resolve(downloadURL);
-            }
-        );
-    });
-};
 
 export const uploadContent = async (content: ContentItem) => {
     try {
@@ -66,15 +42,7 @@ export const toggleVisibility = async (id: string, isPublic: boolean) => {
 export const deleteContent = async (id: string, dataUrl?: string) => {
     try {
         await deleteDoc(doc(db, 'community_content', id));
-        // Also try to delete from storage if it's a firebase storage URL
-        if (dataUrl && dataUrl.includes('firebasestorage')) {
-             try {
-                 const fileRef = ref(storage, dataUrl);
-                 await deleteObject(fileRef);
-             } catch (err) {
-                 console.log("Could not delete associated storage object", err);
-             }
-        }
+        // You could also call an API endpoint here to delete from Cloudinary if needed
     } catch (e) {
         console.error("Error deleting document: ", e);
         throw e;
