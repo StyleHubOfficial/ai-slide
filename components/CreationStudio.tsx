@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { PresentationStyle, SharedPresentation, Presentation } from '../types';
 import { communityService } from '../services/communityService';
 import { generatePresentation } from '../services/geminiService';
-import { uploadContent, subscribeToContent, toggleVisibility, deleteContent, ContentItem } from '../services/firebaseService';
+import { uploadContent, subscribeToContent, toggleVisibility, deleteContent, uploadFileToStorage, ContentItem } from '../services/firebaseService';
 import GlassCard from './ui/GlassCard';
 import Button from './ui/Button';
 import Label from './ui/Label';
@@ -63,6 +63,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [showFirebaseUploadModal, setShowFirebaseUploadModal] = useState(false);
   const [internalLoading, setInternalLoading] = useState(false);
   const [activeCommunityTab, setActiveCommunityTab] = useState('my-saved');
+  const [expandedContent, setExpandedContent] = useState<ContentItem | null>(null);
 
   // Cloud Content State
   const [cloudContent, setCloudContent] = useState<ContentItem[]>([]);
@@ -466,19 +467,27 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                         )}
                         
                         {filteredCloudContent.map(c => (
-                             <GlassCard key={c.id} className="p-4 flex flex-col justify-between">
+                             <GlassCard key={c.id} onClick={() => setExpandedContent(c)} className="p-4 flex flex-col justify-between cursor-pointer hover:border-sky-500/50 transition-colors">
                                   <div>
-                                       {c.type === 'image' && <img src={c.data} alt="content" className="w-full h-32 object-cover rounded mb-2 bg-slate-900 border border-slate-700"/>}
-                                       {c.type === 'video' && <video src={c.data} controls className="w-full h-32 object-cover rounded mb-2 bg-slate-900 border border-slate-700"/>}
+                                       {c.type === 'image' && <img src={c.data} alt="content" className="w-full h-auto max-h-[300px] object-contain rounded mb-2 bg-slate-900 border border-slate-700"/>}
+                                       {c.type === 'video' && <video src={c.data} controls className="w-full h-auto max-h-[300px] rounded mb-2 bg-slate-900 border border-slate-700"/>}
                                        {c.type === 'audio' && <div className="w-full h-32 flex items-center justify-center rounded mb-2 bg-slate-900 border border-slate-700 p-2"><audio src={c.data} controls className="w-full"/></div>}
-                                       {c.type === 'pdf' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 flex items-center justify-center"><a href={c.data} target="_blank" rel="noreferrer" className="text-sky-400 font-bold hover:underline py-2 px-4 rounded border border-sky-500/30">View PDF</a></div>}
+                                       {c.type === 'pdf' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 flex items-center justify-center"><a href={c.data} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} className="text-sky-400 font-bold hover:underline py-2 px-4 rounded border border-sky-500/30">View PDF</a></div>}
                                        {c.type === 'text' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 p-2 overflow-y-auto text-xs text-slate-300"><pre className="whitespace-pre-wrap font-sans">{c.data}</pre></div>}
                                        <h3 className="font-bold text-white text-lg truncate" title={c.title}>{c.title}</h3>
                                        <p className="text-xs text-slate-400">Section: {c.section}</p>
                                   </div>
                                   <div className="flex justify-between items-center mt-4 border-t border-slate-700 pt-3">
-                                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${c.isPublic?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-500'}`}>{c.isPublic ? 'Public' : 'Private'}</span>
-                                       {authMode === 'admin' && <button onClick={() => c.id && confirm("Delete Content?") && deleteContent(c.id)} className="text-slate-500 hover:text-red-500"><XIcon className="w-3 h-3"/></button>}
+                                       <div className="flex items-center gap-2">
+                                           <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${c.isPublic?'bg-emerald-500/20 text-emerald-400':'bg-red-500/20 text-red-500'}`}>{c.isPublic ? 'Public' : 'Private'}</span>
+                                           {authMode !== 'guest' && (
+                                               <label className="flex items-center gap-1 cursor-pointer">
+                                                   <input type="checkbox" checked={c.isPublic} onChange={(e) => { e.stopPropagation(); c.id && toggleVisibility(c.id, !c.isPublic) }} onClick={e => e.stopPropagation()} className="accent-sky-500 w-3 h-3" />
+                                                   <span className="text-[10px] text-slate-400 font-bold">Toggle</span>
+                                               </label>
+                                           )}
+                                       </div>
+                                       {authMode !== 'guest' && <button onClick={(e) => { e.stopPropagation(); c.id && confirm("Delete Content?") && deleteContent(c.id, c.data) }} className="text-slate-500 hover:text-red-500 p-1 bg-red-500/10 rounded"><XIcon className="w-4 h-4"/></button>}
                                   </div>
                              </GlassCard>
                         ))}
@@ -516,6 +525,32 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                         )}
                     </div>
                     )}
+                    
+                    {/* EXPANDED CONTENT MODAL */}
+                    {expandedContent && (
+                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setExpandedContent(null)}>
+                            <div className="max-w-6xl w-full max-h-[90vh] flex flex-col relative" onClick={e=>e.stopPropagation()}>
+                                <div className="absolute -top-10 right-0">
+                                    <button onClick={() => setExpandedContent(null)} className="text-white bg-white/10 p-2 rounded-full hover:bg-white/20"><XIcon className="w-6 h-6"/></button>
+                                </div>
+                                <div className="flex-1 overflow-auto bg-slate-950 rounded-lg border border-slate-800 p-2 flex items-center justify-center min-h-[50vh]">
+                                    {expandedContent.type === 'image' && <img src={expandedContent.data} alt="content" className="max-w-full max-h-[80vh] object-contain rounded"/>}
+                                    {expandedContent.type === 'video' && <video src={expandedContent.data} controls autoPlay className="max-w-full max-h-[80vh] rounded"/>}
+                                    {expandedContent.type === 'audio' && <div className="w-full max-w-md p-8 bg-slate-900 rounded-lg flex flex-col items-center"><h3 className="text-white font-bold mb-4">Playing Audio</h3><audio src={expandedContent.data} controls autoPlay className="w-full"/></div>}
+                                    {expandedContent.type === 'pdf' && <iframe src={expandedContent.data} className="w-full h-[80vh] bg-white rounded"/>}
+                                    {expandedContent.type === 'text' && <div className="w-full max-w-4xl p-6 bg-slate-900 rounded-lg text-slate-200 overflow-y-auto max-h-[80vh]"><pre className="whitespace-pre-wrap font-sans text-lg">{expandedContent.data}</pre></div>}
+                                </div>
+                                <div className="mt-4 flex justify-between items-center bg-slate-900/80 p-4 rounded-lg border border-slate-800">
+                                    <h2 className="text-xl font-bold text-white">{expandedContent.title}</h2>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xs text-slate-400">Section: {expandedContent.section}</span>
+                                        <span className="text-xs text-sky-400 font-bold uppercase">{expandedContent.uploader}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                      {/* UPLOAD MODAL */}
                      {showUploadModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -573,18 +608,20 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     let data = fd.get('dataUrl') as string;
                                     
                                     const file = (fd.get('fileInput') as File);
-                                    if (file && file.size > 0) {
-                                        data = await new Promise<string>((resolve) => {
-                                            const reader = new FileReader();
-                                            reader.onload = (e) => resolve(e.target?.result as string);
-                                            reader.readAsDataURL(file);
-                                        });
-                                    }
-
-                                    if (!title || !data) return alert("Title and Content/File are required.");
                                     
                                     setInternalLoading(true);
+                                    
                                     try {
+                                        if (file && file.size > 0) {
+                                            const path = `community/${Date.now()}_${file.name}`;
+                                            data = await uploadFileToStorage(file, path);
+                                        }
+
+                                        if (!title || !data) {
+                                            setInternalLoading(false);
+                                            return alert("Title and Content/File are required.");
+                                        }
+
                                         await uploadContent({
                                             title,
                                             type,
@@ -596,7 +633,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                         });
                                         setShowFirebaseUploadModal(false);
                                     } catch (err) {
-                                        alert("Upload failed. If file is large, prefer providing a URL instead.");
+                                        alert("Upload failed. " + (err instanceof Error ? err.message : String(err)));
                                     } finally {
                                         setInternalLoading(false);
                                     }
