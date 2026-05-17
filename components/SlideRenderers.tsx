@@ -133,7 +133,7 @@ export const getAIImageUrl = (prompt: string, style: PresentationStyle) => {
 
 const SlideContainer: React.FC<{ children: React.ReactNode, theme: any, slide: Slide, style: PresentationStyle }> = ({ children, theme, slide, style }) => {
     // Generate background visualization if prompt exists
-    const bgImage = slide.imagePrompt ? getAIImageUrl(slide.imagePrompt, style) : null;
+    const bgImage = slide.imagePrompt && !slide.diagramSvg ? getAIImageUrl(slide.imagePrompt, style) : null;
     
     return (
         <div 
@@ -208,9 +208,14 @@ export const ContentSlide: React.FC<SlideProps> = ({ slide, style }) => {
             </ul>
         </div>
         
-        {/* Visual Sidebar - Polaroid/Sketch style */}
+        {/* Visual Sidebar - Polaroid/Sketch style or SVG */}
         <div className={`col-span-5 h-[80%] mt-8 transform -rotate-2 rounded-sm border-8 ${style === PresentationStyle.Blackboard ? 'border-white/10' : 'border-white'} shadow-xl bg-white relative overflow-hidden group`}>
-             {slide.imagePrompt ? (
+             {slide.diagramSvg ? (
+                <div 
+                    className="w-full h-full flex items-center justify-center p-4 svg-diagram-container"
+                    dangerouslySetInnerHTML={{ __html: slide.diagramSvg }}
+                ></div>
+             ) : slide.imagePrompt ? (
                 <div 
                     className="absolute inset-0 bg-cover bg-center" 
                     style={{ backgroundImage: `url(${getAIImageUrl(slide.imagePrompt, style)})` }}

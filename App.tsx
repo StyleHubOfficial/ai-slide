@@ -15,7 +15,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => {
+  const handleCreate = async (topic: string, style: PresentationStyle, fileContext: string, slideCount: number, generateSvg: boolean = false) => {
     setIsLoading(true);
     setError(null);
     
@@ -27,7 +27,7 @@ function App() {
     try {
       // Race between generation and timeout
       const data = await Promise.race([
-        generatePresentation({ topic, style, fileContext, slideCount }),
+        generatePresentation({ topic, style, fileContext, slideCount, generateSvg }),
         timeout
       ]) as Presentation;
 

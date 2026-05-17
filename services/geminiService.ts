@@ -25,44 +25,24 @@ export async function sendChatMessage(history: ChatMessage[], newMessage: string
         const apiKey = getApiKey();
         const ai = new GoogleGenAI({ apiKey });
         
-        if (modelId === 'gemini-2.5-flash-image') {
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash-image',
-                contents: { parts: [{ text: newMessage }] },
-            });
+        // Convert internal history to Gemini format, filtering out image messages for text models
+        const chatHistory = history
+            .filter(msg => !msg.images || msg.images.length === 0)
+            .map(msg => ({
+                role: msg.role,
+                parts: [{ text: msg.text }]
+            }));
 
-            let text = '';
-            const images: string[] = [];
-
-            if (response.candidates?.[0]?.content?.parts) {
-                for (const part of response.candidates[0].content.parts) {
-                    if (part.text) text += part.text;
-                    if (part.inlineData) {
-                        images.push(`data:${part.inlineData.mimeType};base64,${part.inlineData.data}`);
-                    }
-                }
+        const chat = ai.chats.create({
+            model: modelId,
+            history: chatHistory,
+            config: {
+                systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative study assistant. You help users brainstorm study topics, outline lecture notes, and answer technical questions. Keep answers educational, concise, and professional. Use emojis! 📚🎓✏️",
             }
-            return { text: text || (images.length > 0 ? "Generated Image:" : "I couldn't generate an image."), images };
-        } else {
-            // Convert internal history to Gemini format, filtering out image messages for text models
-            const chatHistory = history
-                .filter(msg => !msg.images || msg.images.length === 0)
-                .map(msg => ({
-                    role: msg.role,
-                    parts: [{ text: msg.text }]
-                }));
+        });
 
-            const chat = ai.chats.create({
-                model: modelId,
-                history: chatHistory,
-                config: {
-                    systemInstruction: "You are 'Lakshya AI', a helpful, intelligent, and creative study assistant. You help users brainstorm study topics, outline lecture notes, and answer technical questions. Keep answers educational, concise, and professional. Use emojis! 📚🎓✏️",
-                }
-            });
-
-            const result = await chat.sendMessage({ message: newMessage });
-            return { text: result.text || "I'm having trouble thinking right now. 🤯" };
-        }
+        const result = await chat.sendMessage({ message: newMessage });
+        return { text: result.text || "I'm having trouble thinking right now. 🤯" };
     } catch (error: any) {
         console.error("Chat Error:", error);
         return { text: "Sorry, I encountered an error connecting to the AI. ⚠️" };
@@ -87,7 +67,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
 
   const ai = new GoogleGenAI({ apiKey });
   
-  const { topic, style, fileContext, slideCount } = params;
+  const { topic, style, fileContext, slideCount, generateSvg } = params;
 
   // Enforce a hard limit on slide count for stability
   const safeSlideCount = Math.min(slideCount, 15);
@@ -122,11 +102,17 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
        - For History/Literature: Write timelines or character maps.
 
     3. **Visuals (Crucial)**: 
-       - The 'imagePrompt' field represents a DRAWING on the board.
-       - IF Style is Blackboard: prompt should start with "Chalk drawing on blackboard, white chalk lines, sketch style..."
-       - IF Style is Whiteboard: prompt should start with "Marker drawing on whiteboard, colorful marker lines, hand drawn..."
-       - IF Style is Blueprint: prompt should start with "Technical blueprint schematic, white lines on blue, vector style..."
-       - Example: "Chalk drawing of a cell structure with labels, simple white lines on dark background".
+       ${generateSvg 
+         ? `- You MUST generate raw, valid, and beautiful SVG code for diagrams where appropriate.
+            - If a slide would benefit from a diagram (e.g. process, flow, chart, anatomy), set 'diagramSvg' to the raw SVG string.
+            - Ensure the SVG is responsive (e.g., viewBox="0 0 500 300" width="100%" h="auto"), uses appropriate colors for ${style}, and uses valid <svg>...<path>...</svg> format.
+            - DO NOT output an imagePrompt if you output diagramSvg.`
+         : `- The 'imagePrompt' field represents a DRAWING on the board.
+            - IF Style is Blackboard: prompt should start with "Chalk drawing on blackboard, white chalk lines, sketch style..."
+            - IF Style is Whiteboard: prompt should start with "Marker drawing on whiteboard, colorful marker lines, hand drawn..."
+            - IF Style is Blueprint: prompt should start with "Technical blueprint schematic, white lines on blue, vector style..."
+            - Example: "Chalk drawing of a cell structure with labels, simple white lines on dark background".`
+       }
 
     4. **Speaker Notes**: Write a lecture script for the professor to say while this board is shown.
 
@@ -148,7 +134,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
           "type": "title",
           "title": "Course Title",
           "subtitle": "Lesson 1: Introduction",
-          "imagePrompt": "Chalk drawing of...",
+          ${generateSvg ? `"diagramSvg": "<svg viewBox=\\"0 0 100 100\\">...</svg>",` : `"imagePrompt": "Chalk drawing of...",`}
           "speakerNotes": "Welcome class..."
         },
         {
@@ -156,7 +142,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
           "type": "content",
           "title": "Core Concept",
           "bulletPoints": ["Definition...", "Key Principle...", "Example..."],
-          "imagePrompt": "Hand drawn diagram of...",
+          ${generateSvg ? `"diagramSvg": "<svg viewBox=\\"0 0 500 300\\">...</svg>",` : `"imagePrompt": "Hand drawn diagram of...",`}
           "layout": "split"
         }
       ]
@@ -165,7 +151,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: generateSvg ? 'gemini-1.5-pro' : 'gemini-2.5-flash',
       contents: { parts: [{ text: prompt }] },
       config: {
         maxOutputTokens: 8192, 

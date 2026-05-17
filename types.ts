@@ -11,7 +11,7 @@ export type TransitionStyle = 'fade' | 'zoom' | 'hologram' | 'shutter' | 'glitch
 
 export type SlideType = 'title' | 'content' | 'chart' | 'table' | 'process';
 
-export type AiModelId = 'gemini-2.5-flash' | 'gemini-flash-lite-latest' | 'gemini-3-pro-preview' | 'gemini-2.5-flash-image';
+export type AiModelId = 'gemini-2.5-flash' | 'gemini-flash-lite-latest' | 'gemini-3-pro-preview';
 
 export interface ChartData {
   labels: string[];
@@ -44,6 +44,7 @@ export interface Slide {
   processSteps?: ProcessStep[];
   backgroundImageKeyword?: string; 
   imagePrompt?: string; // AI Image Generation Prompt
+  diagramSvg?: string; // AI generated SVG diagram 
   layout?: 'left' | 'right' | 'center' | 'split';
   speakerNotes?: string; 
 }
@@ -70,6 +71,7 @@ export interface GenerationParams {
   style: PresentationStyle;
   fileContext?: string; 
   slideCount: number;
+  generateSvg?: boolean;
 }
 
 export interface ChatMessage {

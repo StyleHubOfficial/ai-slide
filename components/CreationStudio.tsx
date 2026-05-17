@@ -23,7 +23,7 @@ import LoadingOverlay from './ui/LoadingOverlay';
 import TourGuide, { TourStep } from './ui/TourGuide';
 
 interface CreationStudioProps {
-  onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number) => void;
+  onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number, generateSvg: boolean) => void;
   onOpenHistory: (presentation: Presentation) => void;
   onCancelLoading: () => void;
   isLoading: boolean;
@@ -48,6 +48,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const [topic, setTopic] = useState('');
   const [style, setStyle] = useState<PresentationStyle>(PresentationStyle.Blackboard);
   const [slideCount, setSlideCount] = useState(7);
+  const [createWithImages, setCreateWithImages] = useState(false); // Used for rendering SVG Diagrams
 
   // Converter State (Home)
   const [fileContext, setFileContext] = useState('');
@@ -138,9 +139,9 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
   const handleCreateAction = (type: 'architect' | 'convert') => {
      setLoadingType(type);
      if (type === 'convert') {
-        onCreate(fileName ? `Study Guide: ${fileName}` : topic, style, fileContext, slideCount);
+        onCreate(fileName ? `Study Guide: ${fileName}` : topic, style, fileContext, slideCount, false); // No SVG in convert mode as requested
      } else {
-        onCreate(topic, style, '', slideCount);
+        onCreate(topic, style, '', slideCount, createWithImages);
      }
   };
 
@@ -324,6 +325,16 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                          <div className="mb-8">
                              <Label className="text-slate-400">Length: {slideCount} Boards</Label>
                              <input type="range" min="3" max="12" value={slideCount} onChange={(e) => setSlideCount(parseInt(e.target.value))} className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-sky-500 mt-4" />
+                         </div>
+                         <div className="mb-8 flex items-center justify-between bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
+                             <div>
+                                 <Label className="text-sky-400 mb-1 block">Generate Advanced SVG Diagrams</Label>
+                                 <p className="text-xs text-slate-400">Uses powerful AI to draw scalable diagrams</p>
+                             </div>
+                             <label className="relative inline-flex items-center cursor-pointer">
+                               <input type="checkbox" className="sr-only peer" checked={createWithImages} onChange={(e) => setCreateWithImages(e.target.checked)} />
+                               <div className="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-500"></div>
+                             </label>
                          </div>
                          <Button onClick={() => handleCreateAction('architect')} disabled={isLoading || !topic} className="w-full h-12 text-lg bg-sky-600 hover:bg-sky-500">
                             Generate Concepts
