@@ -413,7 +413,11 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                 <div className="w-full max-w-5xl animate-fade-in-up flex flex-col h-full">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                         <h1 className="text-3xl font-bold text-white shrink-0">Community Hub</h1>
-                        <button onClick={() => authMode !== 'guest' ? setShowUploadModal(true) : handleLogin()} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20 shrink-0"><UploadIcon className="w-4 h-4"/> Upload Content</button>
+                        {isCustomSection ? (
+                            <button onClick={handleCloudUpload} className="bg-emerald-600 hover:bg-emerald-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-emerald-500/20 shrink-0"><UploadIcon className="w-4 h-4"/> Upload Content</button>
+                        ) : (
+                            <button onClick={() => authMode !== 'guest' ? setShowUploadModal(true) : handleLogin()} className="bg-sky-600 hover:bg-sky-500 px-4 py-2 rounded-lg text-white text-sm font-bold flex gap-2 shadow-lg shadow-sky-500/20 shrink-0"><UploadIcon className="w-4 h-4"/> Share Notes</button>
+                        )}
                     </div>
 
                     <div className="flex gap-2 overflow-x-auto pb-4 mb-4 custom-scrollbar shrink-0 w-full no-scrollbar">
@@ -466,6 +470,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                   <div>
                                        {c.type === 'image' && <img src={c.data} alt="content" className="w-full h-32 object-cover rounded mb-2 bg-slate-900 border border-slate-700"/>}
                                        {c.type === 'video' && <video src={c.data} controls className="w-full h-32 object-cover rounded mb-2 bg-slate-900 border border-slate-700"/>}
+                                       {c.type === 'audio' && <div className="w-full h-32 flex items-center justify-center rounded mb-2 bg-slate-900 border border-slate-700 p-2"><audio src={c.data} controls className="w-full"/></div>}
                                        {c.type === 'pdf' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 flex items-center justify-center"><a href={c.data} target="_blank" rel="noreferrer" className="text-sky-400 font-bold hover:underline py-2 px-4 rounded border border-sky-500/30">View PDF</a></div>}
                                        {c.type === 'text' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 p-2 overflow-y-auto text-xs text-slate-300"><pre className="whitespace-pre-wrap font-sans">{c.data}</pre></div>}
                                        <h3 className="font-bold text-white text-lg truncate" title={c.title}>{c.title}</h3>
@@ -603,8 +608,9 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                    <div>
                                        <Label>Content Type</Label>
                                        <Select name="type" className="w-full bg-slate-900">
-                                           <option value="image">Image</option>
-                                           <option value="video">Video</option>
+                                           <option value="image">Image (JPG, PNG)</option>
+                                           <option value="video">Video (MP4)</option>
+                                           <option value="audio">Audio</option>
                                            <option value="pdf">PDF</option>
                                            <option value="text">Text / Link</option>
                                        </Select>
