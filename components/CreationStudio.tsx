@@ -488,7 +488,23 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                                </label>
                                            )}
                                        </div>
-                                       {authMode !== 'guest' && <button onClick={(e) => { e.stopPropagation(); c.id && confirm("Delete Content?") && deleteContent(c.id, c.data) }} className="text-slate-500 hover:text-red-500 p-1 bg-red-500/10 rounded"><XIcon className="w-4 h-4"/></button>}
+                                       <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    navigator.clipboard.writeText(c.data); 
+                                                    const btn = e.currentTarget;
+                                                    const original = btn.innerHTML;
+                                                    btn.innerHTML = '<span class="text-[10px] px-1 font-bold">Copied!</span>';
+                                                    setTimeout(() => btn.innerHTML = original, 2000);
+                                                }} 
+                                                className="text-slate-400 hover:text-sky-400 p-1 bg-slate-800 rounded transition-colors"
+                                                title="Share / Copy Link"
+                                            >
+                                                <ShareIcon className="w-4 h-4"/>
+                                            </button>
+                                            {authMode !== 'guest' && <button onClick={(e) => { e.stopPropagation(); c.id && confirm("Delete Content?") && deleteContent(c.id, c.data) }} className="text-slate-500 hover:text-red-500 p-1 bg-red-500/10 rounded"><XIcon className="w-4 h-4"/></button>}
+                                       </div>
                                   </div>
                              </GlassCard>
                         ))}
@@ -615,9 +631,20 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     
                                     try {
                                         if (file && file.size > 0) {
+                                            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+                                            const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+                                            
+                                            if (!cloudName || !uploadPreset) {
+                                                throw new Error("Missing VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET in environment variables. You must set these for Cloudinary uploads to work on Vercel.");
+                                            }
+
+                                            let resourceType = 'auto';
+                                            if (type === 'video' || type === 'audio') resourceType = 'video';
+                                            else if (type === 'pdf') resourceType = 'raw';
+
                                             data = await new Promise<string>((resolve, reject) => {
                                                 const xhr = new XMLHttpRequest();
-                                                xhr.open('POST', '/api/upload', true);
+                                                xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, true);
                                                 
                                                 xhr.upload.onprogress = (e) => {
                                                     if (e.lengthComputable) {
@@ -629,11 +656,11 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                                 xhr.onload = () => {
                                                     if (xhr.status === 200) {
                                                         const response = JSON.parse(xhr.responseText);
-                                                        resolve(response.url);
+                                                        resolve(response.secure_url);
                                                     } else {
                                                         try {
                                                             const response = JSON.parse(xhr.responseText);
-                                                            reject(new Error(response.error || "Upload failed"));
+                                                            reject(new Error(response.error?.message || "Upload failed"));
                                                         } catch(e) {
                                                             reject(new Error("Upload failed"));
                                                         }
@@ -646,7 +673,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                                 
                                                 const formData = new FormData();
                                                 formData.append('file', file);
-                                                formData.append('type', type);
+                                                formData.append('upload_preset', uploadPreset);
                                                 xhr.send(formData);
                                             });
                                         }
@@ -771,7 +798,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
       {/* Main Content */}
       <main 
-        className={activeTab === 'CHAT' ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden w-full lg:rounded-tl-3xl bg-slate-950' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center'}
+        className={activeTab === 'CHAT' ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden w-full lg:rounded-tl-3xl bg-slate-950' : 'flex-1 overflow-y-auto relative z-10 p-4 pb-20 lg:p-12 flex flex-col items-center w-full'}
       >
          {/* Mobile Header - Hide only for Chat to give full screen feel */}
          {activeTab !== 'CHAT' && (

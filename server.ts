@@ -30,6 +30,10 @@ async function startServer() {
 
   // Cloudinary Upload Endpoint
   app.post("/api/upload", upload.single("file"), (req, res) => {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      return res.status(500).json({ error: "Cloudinary API keys are missing in the server environment variables. Please configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET." });
+    }
+
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
     }
@@ -47,7 +51,7 @@ async function startServer() {
       (error, result) => {
         if (error) {
           console.error("Cloudinary upload error:", error);
-          return res.status(500).json({ error: error.message });
+          return res.status(500).json({ error: "Cloudinary error: " + error.message });
         }
         res.json({ url: result?.secure_url });
       }
