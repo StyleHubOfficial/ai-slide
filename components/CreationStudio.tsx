@@ -508,8 +508,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
       {/* Main Content */}
       <main 
-        className={`${isMobileChat ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden lg:pb-0' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-24 lg:pb-12'}`}
-        style={isMobileChat ? { paddingBottom: 'calc(4rem + env(safe-area-inset-bottom))' } : {}}
+        className={`${isMobileChat ? 'flex-1 relative z-10 flex flex-col h-full overflow-hidden lg:pb-0' : 'flex-1 overflow-y-auto relative z-10 p-4 lg:p-12 flex flex-col items-center pb-32 lg:pb-12'}`}
+        style={isMobileChat ? { paddingBottom: 'calc(4.5rem + env(safe-area-inset-bottom))' } : {}}
       >
          {/* Mobile Header - Hide only for Chat to give full screen feel */}
          {activeTab !== 'CHAT' && (

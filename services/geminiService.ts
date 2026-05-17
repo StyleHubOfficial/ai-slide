@@ -107,11 +107,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
             - If a slide would benefit from a diagram (e.g. process, flow, chart, anatomy), set 'diagramSvg' to the raw SVG string.
             - Ensure the SVG is responsive (e.g., viewBox="0 0 500 300" width="100%" h="auto"), uses appropriate colors for ${style}, and uses valid <svg>...<path>...</svg> format.
             - DO NOT output an imagePrompt if you output diagramSvg.`
-         : `- The 'imagePrompt' field represents a DRAWING on the board.
-            - IF Style is Blackboard: prompt should start with "Chalk drawing on blackboard, white chalk lines, sketch style..."
-            - IF Style is Whiteboard: prompt should start with "Marker drawing on whiteboard, colorful marker lines, hand drawn..."
-            - IF Style is Blueprint: prompt should start with "Technical blueprint schematic, white lines on blue, vector style..."
-            - Example: "Chalk drawing of a cell structure with labels, simple white lines on dark background".`
+         : `- DO NOT generate any images, image prompts, or SVG diagrams. Focus purely on text content, tables, charts, or bullet points. Avoid 'imagePrompt' or 'diagramSvg' completely.`
        }
 
     4. **Speaker Notes**: Write a lecture script for the professor to say while this board is shown.
@@ -134,7 +130,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
           "type": "title",
           "title": "Course Title",
           "subtitle": "Lesson 1: Introduction",
-          ${generateSvg ? `"diagramSvg": "<svg viewBox=\\"0 0 100 100\\">...</svg>",` : `"imagePrompt": "Chalk drawing of...",`}
+          ${generateSvg ? `"diagramSvg": "<svg viewBox=\\"0 0 100 100\\">...</svg>",` : ``}
           "speakerNotes": "Welcome class..."
         },
         {
@@ -142,7 +138,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
           "type": "content",
           "title": "Core Concept",
           "bulletPoints": ["Definition...", "Key Principle...", "Example..."],
-          ${generateSvg ? `"diagramSvg": "<svg viewBox=\\"0 0 500 300\\">...</svg>",` : `"imagePrompt": "Hand drawn diagram of...",`}
+          ${generateSvg ? `"diagramSvg": "<svg viewBox=\\"0 0 500 300\\">...</svg>",` : ``}
           "layout": "split"
         }
       ]
@@ -151,7 +147,7 @@ export async function generatePresentation(params: GenerationParams): Promise<Pr
 
   try {
     const response = await ai.models.generateContent({
-      model: generateSvg ? 'gemini-1.5-pro' : 'gemini-2.5-flash',
+      model: generateSvg ? 'gemini-3-flash-preview' : 'gemini-2.5-flash',
       contents: { parts: [{ text: prompt }] },
       config: {
         maxOutputTokens: 8192, 

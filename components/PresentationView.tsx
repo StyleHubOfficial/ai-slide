@@ -44,8 +44,8 @@ const THEMES = [
 const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClose }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [viewMode, setViewMode] = useState<'SLIDE' | 'GRID' | 'PRESENTER'>('SLIDE');
-  const [isLaserMode, setIsLaserMode] = useState(false);
-  const [laserPos, setLaserPos] = useState({ x: 0, y: 0 });
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const initialPinchDist = useRef<number | null>(null);
   
   // UI State
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
@@ -71,7 +71,30 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
     return () => window.removeEventListener('resize', handleResize);
   }, [viewMode]);
 
-  const handleMouseMove = (e: React.MouseEvent) => { if (isLaserMode) setLaserPos({ x: e.clientX, y: e.clientY }); };
+  const handleTouchStart = (e: React.TouchEvent) => {
+      if (e.touches.length === 2) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          initialPinchDist.current = Math.hypot(dx, dy);
+      }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+      if (e.touches.length === 2 && initialPinchDist.current !== null) {
+          const dx = e.touches[0].clientX - e.touches[1].clientX;
+          const dy = e.touches[0].clientY - e.touches[1].clientY;
+          const dist = Math.hypot(dx, dy);
+          const ratio = dist / initialPinchDist.current;
+          setZoomLevel(prev => Math.min(Math.max(0.5, prev * ratio), 5));
+          initialPinchDist.current = dist;
+      }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+      if (e.touches.length < 2) {
+          initialPinchDist.current = null;
+      }
+  };
 
   const handleShareToCommunity = () => {
         if (confirm("Publish this presentation to the Community Hub?")) {
@@ -145,7 +168,11 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
                 <button onClick={() => setViewMode('GRID')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${viewMode === 'GRID' ? 'bg-sky-600 shadow-lg' : 'text-slate-400 hover:text-white'}`}>Grid</button>
                 <button onClick={() => setViewMode('PRESENTER')} className={`px-3 py-1 rounded text-xs font-bold transition-all ${viewMode === 'PRESENTER' ? 'bg-sky-600 shadow-lg' : 'text-slate-400 hover:text-white'}`}><PresenterIcon className="w-3 h-3 inline mr-1"/>Presenter</button>
              </div>
-             <button onClick={() => setIsLaserMode(!isLaserMode)} className={`p-2 rounded-lg transition-colors ${isLaserMode ? 'bg-red-500/20 text-red-400' : 'text-slate-400 hover:text-white'}`} title="Laser Pointer"><div className="w-3 h-3 rounded-full bg-current shadow-sm"></div></button>
+             <div className="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/10">
+                 <button onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.2))} className="px-2 py-1 text-xs text-slate-400 hover:text-white font-bold" title="Zoom Out">-</button>
+                 <button onClick={() => setZoomLevel(1)} className="px-2 py-1 text-[10px] text-sky-400 font-bold" title="Reset Zoom">{Math.round(zoomLevel * 100)}%</button>
+                 <button onClick={() => setZoomLevel(z => Math.min(5, z + 0.2))} className="px-2 py-1 text-xs text-slate-400 hover:text-white font-bold" title="Zoom In">+</button>
+             </div>
              
              {/* THEME PICKER */}
              <div className="flex gap-1 bg-black/40 p-1 rounded-lg border border-white/10">
@@ -178,7 +205,7 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
       </div>
 
       {/* --- MAIN STAGE --- */}
-      <div className="no-print flex-1 relative bg-black overflow-hidden flex flex-col" ref={containerRef} onMouseMove={handleMouseMove}>
+      <div className="no-print flex-1 relative bg-black overflow-hidden flex flex-col" ref={containerRef}>
         
         {/* Mobile Header Overlay */}
         <div className="md:hidden absolute top-0 left-0 right-0 z-[60] p-4 flex justify-between pointer-events-none">
@@ -215,10 +242,12 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
                  </div>
 
                  <div className="flex justify-between items-center mb-4 p-2 bg-white/5 rounded-lg">
-                     <span className="text-xs font-bold">Laser Pointer</span>
-                     <button onClick={() => setIsLaserMode(!isLaserMode)} className={`w-8 h-4 rounded-full relative transition-colors ${isLaserMode ? 'bg-red-500' : 'bg-slate-700'}`}>
-                         <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all ${isLaserMode ? 'left-4.5' : 'left-0.5'}`}></div>
-                     </button>
+                     <span className="text-xs font-bold">Zoom Level</span>
+                     <div className="flex items-center gap-2">
+                         <button onClick={() => setZoomLevel(z => Math.max(0.5, z - 0.2))} className="w-6 h-6 rounded bg-black/50 text-slate-400 font-bold">-</button>
+                         <span className="text-[10px] text-sky-400 font-bold w-8 text-center">{Math.round(zoomLevel * 100)}%</span>
+                         <button onClick={() => setZoomLevel(z => Math.min(5, z + 0.2))} className="w-6 h-6 rounded bg-black/50 text-slate-400 font-bold">+</button>
+                     </div>
                  </div>
                  
                  <div className="space-y-2">
@@ -229,12 +258,8 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
             </div>
         )}
 
-        {isLaserMode && (
-           <div className="fixed w-4 h-4 bg-red-500 rounded-full blur-[2px] pointer-events-none z-[100] shadow-[0_0_15px_rgba(239,68,68,0.8)] mix-blend-screen" style={{ left: laserPos.x, top: laserPos.y, transform: 'translate(-50%, -50%)' }}></div>
-        )}
-
         {viewMode === 'GRID' && (
-           <div className="w-full h-full overflow-y-auto grid grid-cols-2 md:grid-cols-4 gap-4 p-4 content-start pb-24 pt-16 md:pt-4">
+           <div className="w-full h-full overflow-y-auto grid grid-cols-2 md:grid-cols-4 gap-4 p-4 content-start pb-32 pt-16 md:pt-4">
               {presentation.slides.map((slide, idx) => (
                  <div key={slide.id} onClick={() => { setCurrentSlideIndex(idx); setViewMode('SLIDE'); }} className={`aspect-video bg-slate-900 rounded-lg border cursor-pointer relative overflow-hidden group hover:scale-105 transition-all ${idx === currentSlideIndex ? 'border-sky-500 ring-2 ring-sky-500/50' : 'border-white/10'}`}>
                     <div className="absolute inset-0 pointer-events-none origin-top-left transform scale-[0.25] w-[400%] h-[400%]">
@@ -247,17 +272,32 @@ const PresentationView: React.FC<PresentationViewProps> = ({ presentation, onClo
         )}
 
         {viewMode === 'SLIDE' && (
-           <div className="flex-1 flex items-center justify-center overflow-hidden bg-black">
-              <div style={{ width: BASE_WIDTH, height: BASE_HEIGHT, transform: `scale(${scale})`, transformOrigin: 'center' }} className="relative shadow-2xl">
-                 <div key={currentSlideIndex} className={`w-full h-full slide-enter-${transition}`}>
-                    <SlideRenderer slide={currentSlide} style={activeStyle} />
-                 </div>
+           <div 
+             className="flex-1 overflow-auto bg-black touch-pan-x touch-pan-y flex justify-center items-center"
+             onTouchStart={handleTouchStart}
+             onTouchMove={handleTouchMove}
+             onTouchEnd={handleTouchEnd}
+           >
+              <div 
+                style={{ 
+                  width: BASE_WIDTH * scale * zoomLevel, 
+                  height: BASE_HEIGHT * scale * zoomLevel,
+                  minWidth: BASE_WIDTH * scale * zoomLevel,
+                  minHeight: BASE_HEIGHT * scale * zoomLevel
+                }} 
+                className="relative flex-none"
+              >
+                  <div style={{ width: BASE_WIDTH, height: BASE_HEIGHT, transform: `scale(${scale * zoomLevel})`, transformOrigin: 'top left' }} className="relative shadow-2xl">
+                     <div key={currentSlideIndex} className={`w-full h-full slide-enter-${transition}`}>
+                        <SlideRenderer slide={currentSlide} style={activeStyle} />
+                     </div>
+                  </div>
               </div>
            </div>
         )}
 
         {viewMode === 'PRESENTER' && (
-           <div className="flex-1 grid grid-cols-1 gap-4 p-4 bg-slate-950 overflow-y-auto pb-24 pt-16 md:pt-4">
+           <div className="flex-1 grid grid-cols-1 gap-4 p-4 bg-slate-950 overflow-y-auto pb-32 pt-16 md:pt-4">
               <div className="aspect-video bg-black border border-white/20 rounded-lg relative flex items-center justify-center overflow-hidden">
                  <div style={{ width: BASE_WIDTH, height: BASE_HEIGHT, transform: `scale(${scale * 0.5})`, transformOrigin: 'center' }}>
                     <SlideRenderer slide={currentSlide} style={activeStyle} />
