@@ -106,6 +106,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
     // Check if user has seen tour
     const hasSeenTour = localStorage.getItem('lakshya_has_seen_tour');
     if (!hasSeenTour) {
+        setTimeout(() => handleStartTour(), 1000);
         localStorage.setItem('lakshya_has_seen_tour', 'true');
     }
 
@@ -778,90 +779,103 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                 <form onSubmit={async (e) => {
                                     e.preventDefault();
                                     const fd = new FormData(e.currentTarget);
-                                    const title = fd.get('title') as string;
+                                    const baseTitle = (fd.get('title') as string).trim() || "Document";
                                     const type = fd.get('type') as string;
                                     const isPublic = fd.get('isPublic') === 'on';
-                                    let data = fd.get('dataUrl') as string;
+                                    let textData = fd.get('dataUrl') as string;
                                     
-                                    const file = (fd.get('fileInput') as File);
+                                    const allFiles = fd.getAll('fileInput') as File[];
+                                    const validFiles = allFiles.filter(f => f.size > 0);
                                     
+                                    if (validFiles.length === 0 && !textData) {
+                                        return alert("Title and Content/File are required.");
+                                    }
+
                                     setUploading(true);
                                     setUploadProgress(0);
                                     
-                                    let actualType = type;
-                                    
                                     try {
-                                        if (file && file.size > 0) {
-                                            const fname = file.name.toLowerCase();
-                                            if (file.type.includes('image') || fname.match(/\.(jpg|jpeg|png|gif|webp)$/)) actualType = 'image';
-                                            else if (file.type.includes('video') || fname.match(/\.(mp4|webm|ogg|mov)$/)) actualType = 'video';
-                                            else if (file.type.includes('audio') || fname.match(/\.(mp3|wav|ogg|m4a)$/)) actualType = 'audio';
-                                            else if (file.type.includes('pdf') || fname.match(/\.pdf$/)) actualType = 'pdf';
-                                            else if (file.type.includes('text') || fname.endsWith('.txt')) actualType = 'text';
-                                            else actualType = type; // Fallback to user selection if browser detection fails
+                                        if (validFiles.length > 0) {
+                                            for (let i = 0; i < validFiles.length; i++) {
+                                                const file = validFiles[i];
+                                                const fname = file.name.toLowerCase();
+                                                let actualType = type;
+                                                if (file.type.includes('image') || fname.match(/\.(jpg|jpeg|png|gif|webp)$/)) actualType = 'image';
+                                                else if (file.type.includes('video') || fname.match(/\.(mp4|webm|ogg|mov)$/)) actualType = 'video';
+                                                else if (file.type.includes('audio') || fname.match(/\.(mp3|wav|ogg|m4a)$/)) actualType = 'audio';
+                                                else if (file.type.includes('pdf') || fname.match(/\.pdf$/)) actualType = 'pdf';
+                                                else if (file.type.includes('text') || fname.endsWith('.txt')) actualType = 'text';
+                                                else actualType = type;
 
-                                            const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-                                            const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-                                            
-                                            if (!cloudName || !uploadPreset) {
-                                                throw new Error("Missing VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET in environment variables. You must set these for Cloudinary uploads to work on Vercel.");
-                                            }
-
-                                            let resourceType = 'auto';
-                                            if (actualType === 'video' || actualType === 'audio') resourceType = 'video';
-                                            else if (actualType === 'pdf') resourceType = 'raw';
-
-                                            data = await new Promise<string>((resolve, reject) => {
-                                                const xhr = new XMLHttpRequest();
-                                                xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, true);
+                                                const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+                                                const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
                                                 
-                                                xhr.upload.onprogress = (e) => {
-                                                    if (e.lengthComputable) {
-                                                        const percentComplete = (e.loaded / e.total) * 100;
-                                                        setUploadProgress(percentComplete);
-                                                    }
-                                                };
-                                                
-                                                xhr.onload = () => {
-                                                    if (xhr.status === 200) {
-                                                        const response = JSON.parse(xhr.responseText);
-                                                        resolve(response.secure_url);
-                                                    } else {
-                                                        try {
-                                                            const response = JSON.parse(xhr.responseText);
-                                                            reject(new Error(response.error?.message || "Upload failed"));
-                                                        } catch(e) {
-                                                            reject(new Error("Upload failed"));
+                                                if (!cloudName || !uploadPreset) {
+                                                    throw new Error("Missing VITE_CLOUDINARY_CLOUD_NAME or VITE_CLOUDINARY_UPLOAD_PRESET");
+                                                }
+
+                                                let resourceType = 'auto';
+                                                if (actualType === 'video' || actualType === 'audio') resourceType = 'video';
+                                                else if (actualType === 'pdf') resourceType = 'raw';
+
+                                                const data = await new Promise<string>((resolve, reject) => {
+                                                    const xhr = new XMLHttpRequest();
+                                                    xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, true);
+                                                    
+                                                    xhr.upload.onprogress = (e) => {
+                                                        if (e.lengthComputable) {
+                                                            const basePercent = (i / validFiles.length) * 100;
+                                                            const filePercent = (e.loaded / e.total) * (100 / validFiles.length);
+                                                            setUploadProgress(basePercent + filePercent);
                                                         }
-                                                    }
-                                                };
+                                                    };
+                                                    
+                                                    xhr.onload = () => {
+                                                        if (xhr.status === 200) {
+                                                            const response = JSON.parse(xhr.responseText);
+                                                            resolve(response.secure_url);
+                                                        } else {
+                                                            try {
+                                                                const response = JSON.parse(xhr.responseText);
+                                                                reject(new Error(response.error?.message || "Upload failed"));
+                                                            } catch(err) {
+                                                                reject(new Error("Upload failed"));
+                                                            }
+                                                        }
+                                                    };
+                                                    
+                                                    xhr.onerror = () => {
+                                                        reject(new Error("Network error during upload"));
+                                                    };
+                                                    
+                                                    const formData = new FormData();
+                                                    formData.append('file', file);
+                                                    formData.append('upload_preset', uploadPreset);
+                                                    xhr.send(formData);
+                                                });
                                                 
-                                                xhr.onerror = () => {
-                                                    reject(new Error("Network error during upload"));
-                                                };
-                                                
-                                                const formData = new FormData();
-                                                formData.append('file', file);
-                                                formData.append('upload_preset', uploadPreset);
-                                                xhr.send(formData);
+                                                const itemTitle = validFiles.length > 0 ? `${baseTitle} - ${String(i + 1).padStart(2, '0')}` : baseTitle;
+                                                await uploadContent({
+                                                    title: itemTitle,
+                                                    type: actualType as any,
+                                                    data,
+                                                    isPublic,
+                                                    section: activeCommunityTab,
+                                                    createdAt: Date.now() + i,
+                                                    uploader: authMode
+                                                });
+                                            }
+                                        } else if (textData) {
+                                            await uploadContent({
+                                                title: baseTitle,
+                                                type: type as any,
+                                                data: textData,
+                                                isPublic,
+                                                section: activeCommunityTab,
+                                                createdAt: Date.now(),
+                                                uploader: authMode
                                             });
                                         }
-
-                                        if (!title || !data) {
-                                            setUploading(false);
-                                            setUploadProgress(0);
-                                            return alert("Title and Content/File are required.");
-                                        }
-
-                                        await uploadContent({
-                                            title,
-                                            type: actualType as any,
-                                            data,
-                                            isPublic,
-                                            section: activeCommunityTab,
-                                            createdAt: Date.now(),
-                                            uploader: authMode
-                                        });
                                         setShowFirebaseUploadModal(false);
                                     } catch (err) {
                                         alert("Upload failed. " + (err instanceof Error ? err.message : String(err)));
@@ -871,8 +885,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     }
                                 }} className="space-y-4">
                                    <div>
-                                       <Label>Title</Label>
-                                       <input name="title" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" placeholder="Content title..." />
+                                       <Label>Title (Base)</Label>
+                                       <input name="title" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" placeholder="Document" defaultValue="Document" />
                                     </div>
                                     <div>
                                         <Label>Content Type</Label>
@@ -886,7 +900,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     </div>
                                     <div className="flex flex-col gap-2 p-3 rounded-lg border border-slate-700 bg-slate-900/50">
                                         <Label>Source (File OR URL/Text)</Label>
-                                        <input type="file" name="fileInput" className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-500/10 file:text-sky-400 hover:file:bg-sky-500/20" />
+                                        <input type="file" name="fileInput" multiple className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-500/10 file:text-sky-400 hover:file:bg-sky-500/20" />
                                         <Textarea name="dataUrl" placeholder="Or paste link/text here..." className="h-20 bg-black/20" />
                                     </div>
                                    <label className="flex items-center gap-3 py-2 cursor-pointer">
