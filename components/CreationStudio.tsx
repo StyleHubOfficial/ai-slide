@@ -23,6 +23,26 @@ import ChatInterface from './ChatInterface';
 import LoadingOverlay from './ui/LoadingOverlay';
 import TourGuide, { TourStep } from './ui/TourGuide';
 
+const getRenderType = (type: string, url: string) => {
+    const lowerUrl = (url || '').toLowerCase();
+    if (lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be')) return 'youtube';
+    if (lowerUrl.match(/\.(mp4|webm|ogg|m3u8|mov)$/i)) return 'video';
+    if (lowerUrl.match(/\.(mp3|wav|ogg|m4a)$/i)) return 'audio';
+    if (lowerUrl.match(/\.(pdf)$/i)) return 'pdf';
+    if (lowerUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) return 'image';
+    return type; // fallback to stored type
+};
+
+const renderYoutube = (url: string) => {
+    let videoId = '';
+    if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1]?.split('?')[0];
+    else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1]?.split('&')[0];
+    if (videoId) {
+        return <iframe src={`https://www.youtube.com/embed/${videoId}`} className="w-full h-full absolute inset-0" allowFullScreen allow="autoplay; encrypted-media" title="YouTube video" />;
+    }
+    return <div className="text-slate-400 p-4 shrink-0 flex w-full h-full justify-center items-center font-bold">Invalid YouTube URL</div>;
+};
+
 interface CreationStudioProps {
   onCreate: (topic: string, style: PresentationStyle, fileContext: string, slideCount: number, generateSvg: boolean) => void;
   onOpenHistory: (presentation: Presentation) => void;
@@ -86,8 +106,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
     // Check if user has seen tour
     const hasSeenTour = localStorage.getItem('lakshya_has_seen_tour');
     if (!hasSeenTour) {
-        // Short delay to ensure rendering
-        setTimeout(() => handleStartTour(), 1000);
+        localStorage.setItem('lakshya_has_seen_tour', 'true');
     }
 
     // Read from Firebase
@@ -467,15 +486,64 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                              </GlassCard>
                         )}
                         
-                        {filteredCloudContent.map(c => (
-                             <GlassCard key={c.id} onClick={() => setExpandedContent(c)} className="p-4 flex flex-col justify-between cursor-pointer hover:border-sky-500/50 transition-colors">
-                                  <div>
-                                       {c.type === 'image' && <img src={c.data} alt="content" className="w-full h-auto max-h-[300px] object-contain rounded mb-2 bg-slate-900 border border-slate-700"/>}
-                                       {c.type === 'video' && <video src={c.data} controls className="w-full h-auto max-h-[300px] rounded mb-2 bg-slate-900 border border-slate-700"/>}
-                                       {c.type === 'audio' && <div className="w-full h-32 flex items-center justify-center rounded mb-2 bg-slate-900 border border-slate-700 p-2"><audio src={c.data} controls className="w-full"/></div>}
-                                       {c.type === 'pdf' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 flex items-center justify-center"><a href={c.data} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} className="text-sky-400 font-bold hover:underline py-2 px-4 rounded border border-sky-500/30">View PDF</a></div>}
-                                       {c.type === 'text' && <div className="w-full h-32 rounded mb-2 bg-slate-800 border border-slate-700 p-2 overflow-y-auto text-xs text-slate-300"><pre className="whitespace-pre-wrap font-sans">{c.data}</pre></div>}
-                                       <h3 className="font-bold text-white text-lg truncate" title={c.title}>{c.title}</h3>
+                        {filteredCloudContent.map(c => {
+                             const renderType = getRenderType(c.type, c.data);
+                             return (
+                             <GlassCard key={c.id} onClick={() => setExpandedContent(c)} className="p-4 flex flex-col justify-between cursor-pointer hover:border-sky-500/50 transition-colors group">
+                                  <div className="w-full">
+                                       {renderType === 'image' && (
+                                           <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-slate-900 border border-slate-700/50 relative">
+                                               <img src={c.data} alt={c.title} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"/>
+                                           </div>
+                                       )}
+                                       {renderType === 'youtube' && (
+                                           <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-slate-900 border border-slate-700/50 relative">
+                                                {renderYoutube(c.data)}
+                                                <div className="absolute inset-0 z-10 hover:bg-black/10 transition-colors cursor-pointer text-transparent"></div>
+                                           </div>
+                                       )}
+                                       {renderType === 'video' && (
+                                           <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-slate-900 border border-slate-700/50 relative">
+                                                <video src={c.data} className="w-full h-full object-contain bg-black"/>
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                                                    <div className="w-12 h-12 rounded-full bg-sky-500/80 flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition-transform">
+                                                        <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                                    </div>
+                                                </div>
+                                           </div>
+                                       )}
+                                       {renderType === 'audio' && (
+                                           <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-gradient-to-br from-indigo-900/40 to-slate-950 border border-slate-700/50 flex flex-col items-center justify-center p-4">
+                                                <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-400 mb-2 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                                                </div>
+                                                <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">Audio Content</span>
+                                           </div>
+                                       )}
+                                       {renderType === 'pdf' && (
+                                           <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-slate-800 border border-slate-700/50 flex flex-col items-center justify-center p-4">
+                                                <div className="w-16 h-16 rounded-lg bg-red-500/20 flex items-center justify-center text-red-500 mb-2 shadow-[0_0_20px_rgba(239,68,68,0.1)]">
+                                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                                </div>
+                                                <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider">PDF Document</span>
+                                           </div>
+                                       )}
+                                       {renderType === 'text' && (
+                                           <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-slate-900 border border-slate-700/50 p-4">
+                                                <div className="w-full h-full overflow-hidden text-[10px] text-slate-500 font-mono leading-tight">
+                                                    <pre className="whitespace-pre-wrap">{c.data}</pre>
+                                                </div>
+                                           </div>
+                                       )}
+                                       {(!['image', 'youtube', 'video', 'audio', 'pdf', 'text'].includes(renderType)) && (
+                                            <div className="w-full aspect-[4/3] rounded-lg mb-3 overflow-hidden bg-slate-800 border border-slate-700/50 flex flex-col items-center justify-center p-4">
+                                                <div className="w-16 h-16 rounded-lg bg-slate-700/50 flex items-center justify-center text-slate-400 mb-2">
+                                                    <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                </div>
+                                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">File Attachment</span>
+                                           </div>
+                                       )}
+                                       <h3 className="font-bold text-white text-lg truncate group-hover:text-sky-400 transition-colors" title={c.title}>{c.title}</h3>
                                        <p className="text-xs text-slate-400">Section: {c.section}</p>
                                   </div>
                                   <div className="flex justify-between items-center mt-4 border-t border-slate-700 pt-3">
@@ -507,7 +575,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                        </div>
                                   </div>
                              </GlassCard>
-                        ))}
+                             );
+                        })}
 
                         {filteredDecks.length === 0 && filteredCloudContent.length === 0 && (!isCustomSection || authMode === 'guest') ? (
                             <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-500 bg-slate-900/30 rounded-2xl border border-dashed border-slate-700/50">
@@ -547,15 +616,105 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                     {expandedContent && (
                         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md" onClick={() => setExpandedContent(null)}>
                             <div className="max-w-6xl w-full max-h-[90vh] flex flex-col relative" onClick={e=>e.stopPropagation()}>
-                                <div className="absolute -top-10 right-0">
-                                    <button onClick={() => setExpandedContent(null)} className="text-white bg-white/10 p-2 rounded-full hover:bg-white/20"><XIcon className="w-6 h-6"/></button>
+                                <div className="absolute -top-10 right-0 flex items-center gap-3">
+                                    <button onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(expandedContent.data);
+                                        const btn = e.currentTarget;
+                                        const original = btn.innerHTML;
+                                        btn.innerHTML = '<span class="text-white text-xs font-bold px-1 whitespace-nowrap">Copied!</span>';
+                                        setTimeout(() => btn.innerHTML = original, 2000);
+                                    }} className="text-white bg-sky-500/80 p-2 rounded-full hover:bg-sky-500 transition-colors shadow-lg" title="Share Content Link">
+                                        <ShareIcon className="w-5 h-5"/>
+                                    </button>
+                                    <button onClick={() => setExpandedContent(null)} className="text-white bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors shadow-lg">
+                                        <XIcon className="w-6 h-6"/>
+                                    </button>
                                 </div>
-                                <div className="flex-1 overflow-auto bg-slate-950 rounded-lg border border-slate-800 p-2 flex items-center justify-center min-h-[50vh]">
-                                    {expandedContent.type === 'image' && <img src={expandedContent.data} alt="content" className="max-w-full max-h-[80vh] object-contain rounded"/>}
-                                    {expandedContent.type === 'video' && <video src={expandedContent.data} controls autoPlay className="max-w-full max-h-[80vh] rounded"/>}
-                                    {expandedContent.type === 'audio' && <div className="w-full max-w-md p-8 bg-slate-900 rounded-lg flex flex-col items-center"><h3 className="text-white font-bold mb-4">Playing Audio</h3><audio src={expandedContent.data} controls autoPlay className="w-full"/></div>}
-                                    {expandedContent.type === 'pdf' && <iframe src={expandedContent.data} className="w-full h-[80vh] bg-white rounded"/>}
-                                    {expandedContent.type === 'text' && <div className="w-full max-w-4xl p-6 bg-slate-900 rounded-lg text-slate-200 overflow-y-auto max-h-[80vh]"><pre className="whitespace-pre-wrap font-sans text-lg">{expandedContent.data}</pre></div>}
+                                <div className="flex-1 overflow-auto bg-slate-950 rounded-2xl border border-slate-800 p-2 flex flex-col items-center justify-center min-h-[50vh] relative">
+                                    <div className="absolute top-4 right-4 flex items-center gap-3 z-20">
+                                        <button onClick={(e) => {
+                                            e.stopPropagation();
+                                            navigator.clipboard.writeText(expandedContent.data);
+                                            const btn = e.currentTarget;
+                                            const original = btn.innerHTML;
+                                            btn.innerHTML = '<span class="text-white text-[10px] font-bold px-1 whitespace-nowrap">Copied!</span>';
+                                            setTimeout(() => btn.innerHTML = original, 2000);
+                                        }} className="text-white bg-sky-500/80 p-2.5 rounded-xl hover:bg-sky-500 transition-all shadow-lg backdrop-blur-md" title="Share Content Link">
+                                            <ShareIcon className="w-5 h-5"/>
+                                        </button>
+                                        <button onClick={() => setExpandedContent(null)} className="text-white bg-red-500/20 p-2.5 rounded-xl hover:bg-red-500/40 transition-all shadow-lg backdrop-blur-md border border-red-500/20">
+                                            <XIcon className="w-6 h-6"/>
+                                        </button>
+                                    </div>
+                                    <div className="w-full h-full flex items-center justify-center p-2">
+                                        {(() => {
+                                            const expandedRenderType = getRenderType(expandedContent.type, expandedContent.data);
+                                            return (
+                                            <>
+                                        {expandedRenderType === 'image' && <img src={expandedContent.data} alt="content" referrerPolicy="no-referrer" className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-[0_0_50px_rgba(56,189,248,0.2)]"/>}
+                                        {expandedRenderType === 'youtube' && (
+                                            <div className="w-full max-w-5xl aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl relative">
+                                                {renderYoutube(expandedContent.data)}
+                                            </div>
+                                        )}
+                                        {expandedRenderType === 'video' && (
+                                            <div className="w-full max-w-5xl aspect-video rounded-3xl overflow-hidden bg-black shadow-2xl relative">
+                                                <video src={expandedContent.data} controls autoPlay referrerPolicy="no-referrer" className="w-full h-full object-contain"/>
+                                            </div>
+                                        )}
+                                        {expandedRenderType === 'audio' && (
+                                            <div className="w-full max-w-md p-10 bg-slate-900 rounded-3xl flex flex-col items-center border border-slate-800 shadow-2xl relative overflow-hidden">
+                                                <div className="absolute inset-0 bg-gradient-to-br from-sky-500/5 to-indigo-500/5 pointer-events-none"></div>
+                                                <div className="w-24 h-24 rounded-full bg-sky-500/20 flex items-center justify-center text-sky-400 mb-6 animate-pulse shadow-[0_0_30px_rgba(56,189,248,0.3)]">
+                                                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" /></svg>
+                                                </div>
+                                                <h3 className="text-white font-black text-xl mb-6 tracking-tighter uppercase">Now Playing</h3>
+                                                <audio src={expandedContent.data} controls autoPlay referrerPolicy="no-referrer" className="w-full rounded-full"/>
+                                            </div>
+                                        )}
+                                        {expandedRenderType === 'pdf' && (
+                                            <div className="w-full h-[80vh] flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
+                                                <object 
+                                                    data={expandedContent.data} 
+                                                    type="application/pdf"
+                                                    className="w-full flex-1"
+                                                >
+                                                    <iframe 
+                                                        src={`https://docs.google.com/gview?url=${encodeURIComponent(expandedContent.data)}&embedded=true`} 
+                                                        className="w-full h-full"
+                                                        title="PDF Viewer"
+                                                    />
+                                                </object>
+                                                <div className="p-4 bg-slate-100 border-t border-slate-200 flex justify-between items-center shrink-0">
+                                                    <span className="text-xs text-slate-600 font-bold uppercase truncate max-w-[50%]">{expandedContent.title}</span>
+                                                    <a href={expandedContent.data} target="_blank" rel="noreferrer" className="px-5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold rounded-lg shadow-sm transition-all flex items-center gap-2">
+                                                        <DownloadIcon className="w-4 h-4" /> Download Original File
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {expandedRenderType === 'text' && (
+                                            <div className="w-full max-w-4xl p-10 bg-slate-900 rounded-3xl text-slate-200 overflow-y-auto max-h-[85vh] border border-slate-800 shadow-2xl leading-relaxed">
+                                                <pre className="whitespace-pre-wrap font-sans text-lg">{expandedContent.data}</pre>
+                                            </div>
+                                        )}
+                                        {(!['image', 'youtube', 'video', 'audio', 'pdf', 'text'].includes(expandedRenderType)) && (
+                                            <div className="w-full max-w-md p-12 bg-slate-900 rounded-3xl flex flex-col items-center border border-slate-800 shadow-2xl">
+                                                <div className="w-24 h-24 rounded-2xl bg-white/5 flex items-center justify-center text-slate-400 mb-6">
+                                                    <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                                                </div>
+                                                <h3 className="text-white font-bold text-xl mb-2">File Attachment</h3>
+                                                <p className="text-slate-500 text-sm mb-8 text-center">This file type cannot be previewed directly.</p>
+                                                <a href={expandedContent.data} target="_blank" rel="noreferrer" className="w-full py-3 bg-sky-500 hover:bg-sky-400 text-white font-bold rounded-xl transition-colors text-center">
+                                                    Download File
+                                                </a>
+                                            </div>
+                                        )}
+                                        </>
+                                        );
+                                        })()}
+                                    </div>
                                 </div>
                                 <div className="mt-4 flex justify-between items-center bg-slate-900/80 p-4 rounded-lg border border-slate-800">
                                     <h2 className="text-xl font-bold text-white">{expandedContent.title}</h2>
@@ -629,8 +788,18 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                     setUploading(true);
                                     setUploadProgress(0);
                                     
+                                    let actualType = type;
+                                    
                                     try {
                                         if (file && file.size > 0) {
+                                            const fname = file.name.toLowerCase();
+                                            if (file.type.includes('image') || fname.match(/\.(jpg|jpeg|png|gif|webp)$/)) actualType = 'image';
+                                            else if (file.type.includes('video') || fname.match(/\.(mp4|webm|ogg|mov)$/)) actualType = 'video';
+                                            else if (file.type.includes('audio') || fname.match(/\.(mp3|wav|ogg|m4a)$/)) actualType = 'audio';
+                                            else if (file.type.includes('pdf') || fname.match(/\.pdf$/)) actualType = 'pdf';
+                                            else if (file.type.includes('text') || fname.endsWith('.txt')) actualType = 'text';
+                                            else actualType = type; // Fallback to user selection if browser detection fails
+
                                             const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
                                             const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
                                             
@@ -639,8 +808,8 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                             }
 
                                             let resourceType = 'auto';
-                                            if (type === 'video' || type === 'audio') resourceType = 'video';
-                                            else if (type === 'pdf') resourceType = 'raw';
+                                            if (actualType === 'video' || actualType === 'audio') resourceType = 'video';
+                                            else if (actualType === 'pdf') resourceType = 'raw';
 
                                             data = await new Promise<string>((resolve, reject) => {
                                                 const xhr = new XMLHttpRequest();
@@ -686,7 +855,7 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
 
                                         await uploadContent({
                                             title,
-                                            type,
+                                            type: actualType as any,
                                             data,
                                             isPublic,
                                             section: activeCommunityTab,
@@ -704,33 +873,42 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
                                    <div>
                                        <Label>Title</Label>
                                        <input name="title" required className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" placeholder="Content title..." />
-                                   </div>
-                                   <div>
-                                       <Label>Content Type</Label>
-                                       <Select name="type" className="w-full bg-slate-900">
-                                           <option value="image">Image (JPG, PNG)</option>
-                                           <option value="video">Video (MP4)</option>
-                                           <option value="audio">Audio</option>
-                                           <option value="pdf">PDF</option>
-                                           <option value="text">Text / Link</option>
-                                       </Select>
-                                   </div>
-                                   <div className="flex flex-col gap-2 p-3 rounded-lg border border-slate-700 bg-slate-900/50">
-                                       <Label>Source (File OR URL/Text)</Label>
-                                       <input type="file" name="fileInput" className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-500/10 file:text-sky-400 hover:file:bg-sky-500/20" />
-                                       <Textarea name="dataUrl" placeholder="Or paste link/text here..." className="h-20 bg-black/20" />
-                                       <p className="text-[10px] text-slate-500">Note: Files over 1MB should be provided as links.</p>
-                                   </div>
+                                    </div>
+                                    <div>
+                                        <Label>Content Type</Label>
+                                        <Select name="type" className="w-full bg-slate-900">
+                                            <option value="image">Image (JPG, PNG)</option>
+                                            <option value="video">Video (MP4)</option>
+                                            <option value="audio">Audio</option>
+                                            <option value="pdf">PDF</option>
+                                            <option value="text">Text / Link</option>
+                                        </Select>
+                                    </div>
+                                    <div className="flex flex-col gap-2 p-3 rounded-lg border border-slate-700 bg-slate-900/50">
+                                        <Label>Source (File OR URL/Text)</Label>
+                                        <input type="file" name="fileInput" className="text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-sky-500/10 file:text-sky-400 hover:file:bg-sky-500/20" />
+                                        <Textarea name="dataUrl" placeholder="Or paste link/text here..." className="h-20 bg-black/20" />
+                                    </div>
                                    <label className="flex items-center gap-3 py-2 cursor-pointer">
                                        <input type="checkbox" name="isPublic" defaultChecked className="accent-sky-500 w-4 h-4" />
                                        <span className="text-sm text-slate-300">Make Public</span>
                                    </label>
-                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3" disabled={uploading}>
-                                       {uploading ? 'Uploading...' : 'Upload'}
+                                   <Button type="submit" className="w-full bg-sky-600 hover:bg-sky-500 py-3 relative overflow-hidden" disabled={uploading}>
+                                       {uploading ? (
+                                            <span className="flex items-center justify-center gap-3">
+                                                <div className="relative w-6 h-6">
+                                                    <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                                        <circle cx="18" cy="18" r="16" fill="none" className="stroke-white/20" strokeWidth="3" />
+                                                        <circle 
+                                                            cx="18" cy="18" r="16" fill="none" className="stroke-white transition-all duration-300" strokeWidth="3" 
+                                                            strokeDasharray="100" strokeDashoffset={`${100 - (Math.round(uploadProgress) || 5)}`} strokeLinecap="round" 
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                <span className="font-bold">Uploading {Math.round(uploadProgress)}%</span>
+                                            </span>
+                                       ) : 'Upload Content'}
                                    </Button>
-                                   {uploadProgress > 0 && <div className="w-full bg-slate-800 rounded-full h-2 mt-2 border border-slate-700 overflow-hidden">
-                                       <div className="bg-sky-500 h-2 rounded-full transition-all duration-300" style={{ width: `${uploadProgress}%` }}></div>
-                                   </div>}
                                 </form>
                             </GlassCard>
                         </div>
@@ -759,9 +937,23 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       <aside className="hidden lg:flex w-64 h-full border-r border-white/5 bg-slate-900/50 backdrop-blur-xl flex-col py-8 z-10 shrink-0">
          <div className="px-6 mb-12 flex items-center justify-between">
             <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shrink-0"><span className="text-white font-black text-xl">L</span></div>
-                <span className="font-black text-lg text-white">Lakshya Studio</span>
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(56,189,248,0.4)]"><span className="text-white font-black text-xl">L</span></div>
+                <span className="font-black text-lg text-white tracking-tight">Lakshya Studio</span>
             </div>
+            <button 
+                onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    const toast = document.createElement('div');
+                    toast.className = 'fixed top-10 left-1/2 -translate-x-1/2 px-6 py-3 bg-sky-500 text-white rounded-full font-bold shadow-2xl z-[200] animate-fade-in-up';
+                    toast.innerText = 'Page link copied to clipboard!';
+                    document.body.appendChild(toast);
+                    setTimeout(() => toast.remove(), 2000);
+                }}
+                className="p-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 transition-all hover:scale-110 active:scale-95"
+                title="Share Study Portal"
+            >
+                <ShareIcon className="w-5 h-5"/>
+            </button>
          </div>
          <div className="px-6 mb-6">
              <button onClick={handleLogin} className="w-full text-xs font-bold px-3 py-2 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors uppercase">
@@ -802,11 +994,25 @@ const CreationStudio: React.FC<CreationStudioProps> = ({ onCreate, onOpenHistory
       >
          {/* Mobile Header - Hide only for Chat to give full screen feel */}
          {activeTab !== 'CHAT' && (
-             <div className="lg:hidden w-full flex justify-between items-center mb-6 shrink-0">
-                 <span className="font-black text-lg text-white">Lakshya Studio</span>
-                 <button onClick={handleLogin} className="text-xs font-bold px-3 py-1.5 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors uppercase">
-                     {authMode === 'guest' ? 'LOGIN' : authMode === 'admin' ? 'ADMIN LOGOUT' : 'LOGOUT'}
-                 </button>
+             <div className="lg:hidden w-full flex justify-between items-center mb-6 shrink-0 bg-slate-900/50 p-4 rounded-2xl border border-white/5">
+                 <div className="flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shrink-0"><span className="text-white font-black text-sm">L</span></div>
+                     <span className="font-black text-lg text-white">Lakshya Studio</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                    <button 
+                        onClick={() => {
+                            navigator.clipboard.writeText(window.location.href);
+                            alert("Page link copied to clipboard!");
+                        }}
+                        className="p-2 rounded-full bg-white/5 text-sky-400 border border-white/5"
+                    >
+                        <ShareIcon className="w-5 h-5"/>
+                    </button>
+                    <button onClick={handleLogin} className="text-xs font-bold px-3 py-1.5 rounded bg-sky-500/20 text-sky-400 hover:bg-sky-500/30 transition-colors uppercase">
+                        {authMode === 'guest' ? 'LOGIN' : authMode === 'admin' ? 'ADMIN LOGOUT' : 'LOGOUT'}
+                    </button>
+                 </div>
              </div>
          )}
          {renderContent()}
